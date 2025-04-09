@@ -6,6 +6,7 @@ import base64
 import time
 from grants_gov_api import fetch_grants_gov_opportunities
 from ny_grants_gateway_scraper import fetch_ny_grants_gateway_opportunities
+from foundation_grants_scraper import fetch_foundation_grants
 from grant_processor import process_grants, tag_grants
 from utils import send_email, send_slack
 from funder_data import FUNDER_CATEGORIES
@@ -63,9 +64,10 @@ def load_grants():
 # Function to fetch all grant opportunities
 def fetch_all_grants():
     with st.spinner("Fetching grant opportunities..."):
-        # Fetch government grants
+        # Fetch grants from all sources
         govt_grants = fetch_grants_gov_opportunities()
         ny_grants = fetch_ny_grants_gateway_opportunities()
+        foundation_grants = fetch_foundation_grants()
         
         # Track data sources
         sources = []
@@ -73,9 +75,11 @@ def fetch_all_grants():
             sources.append("Grants.gov")
         if not ny_grants.empty:
             sources.append("NY Grants Gateway")
+        if not foundation_grants.empty:
+            sources.append("Foundation Grants")
             
         # Combine all grants from actual sources
-        all_grants = pd.concat([govt_grants, ny_grants], ignore_index=True)
+        all_grants = pd.concat([govt_grants, ny_grants, foundation_grants], ignore_index=True)
         
         # If we have data from external sources, process and display it
         if not all_grants.empty:
@@ -202,30 +206,39 @@ if st.session_state.grants_data is not None:
                 
                 if selected_status == "Open":
                     # Show only grants with deadlines in the future or no deadline
+                    today_pd = pd.to_datetime(today)
                     filtered_df = filtered_df[
                         (filtered_df["Deadline"].isna()) | 
-                        (filtered_df["Deadline"].dt.date >= today)
+                        (filtered_df["Deadline"] >= today_pd)
                     ]
                 elif selected_status == "Closing Soon":
                     # Show only grants with deadlines in the next two weeks
+                    today_pd = pd.to_datetime(today)
+                    two_weeks_later_pd = pd.to_datetime(two_weeks_later)
                     filtered_df = filtered_df[
-                        (filtered_df["Deadline"].dt.date >= today) & 
-                        (filtered_df["Deadline"].dt.date <= two_weeks_later)
+                        (filtered_df["Deadline"] >= today_pd) & 
+                        (filtered_df["Deadline"] <= two_weeks_later_pd)
                     ]
                 elif selected_status == "Closed":
                     # Show only grants with deadlines in the past
+                    today_pd = pd.to_datetime(today)
                     filtered_df = filtered_df[
                         (~filtered_df["Deadline"].isna()) & 
-                        (filtered_df["Deadline"].dt.date < today)
+                        (filtered_df["Deadline"] < today_pd)
                     ]
             
             if len(date_range) == 2:
                 start_date, end_date = date_range
                 # Only apply date filter to grants with deadlines
                 has_deadline = ~filtered_df["Deadline"].isna()
+                
+                # Convert dates to pandas datetime objects for comparison
+                start_date_pd = pd.to_datetime(start_date)
+                end_date_pd = pd.to_datetime(end_date)
+                
                 date_filter = (
-                    (filtered_df["Deadline"].dt.date >= start_date) & 
-                    (filtered_df["Deadline"].dt.date <= end_date)
+                    (filtered_df["Deadline"] >= start_date_pd) & 
+                    (filtered_df["Deadline"] <= end_date_pd)
                 )
                 
                 # Keep rows where there's no deadline or the deadline is in range
@@ -396,9 +409,10 @@ else:
         
         if show_only_open:
             today = datetime.datetime.now().date()
+            today_pd = pd.to_datetime(today)
             dashboard_filtered_df = dashboard_filtered_df[
                 (dashboard_filtered_df["Deadline"].isna()) | 
-                (dashboard_filtered_df["Deadline"].dt.date >= today)
+                (dashboard_filtered_df["Deadline"] >= today_pd)
             ]
         
         # Only show dashboard if we have data
@@ -424,18 +438,21 @@ else:
                 # Grants closing soon (next 30 days)
                 today = datetime.datetime.now().date()
                 thirty_days = today + datetime.timedelta(days=30)
+                today_pd = pd.to_datetime(today)
+                thirty_days_pd = pd.to_datetime(thirty_days)
                 closing_soon = dashboard_filtered_df[
                     (dashboard_filtered_df["Deadline"].notna()) & 
-                    (dashboard_filtered_df["Deadline"].dt.date >= today) & 
-                    (dashboard_filtered_df["Deadline"].dt.date <= thirty_days)
+                    (dashboard_filtered_df["Deadline"] >= today_pd) & 
+                    (dashboard_filtered_df["Deadline"] <= thirty_days_pd)
                 ]
                 st.metric("Closing in 30 Days", len(closing_soon))
             
             with col4:
                 # Open grants
+                today_pd = pd.to_datetime(today)
                 open_grants = dashboard_filtered_df[
                     (dashboard_filtered_df["Deadline"].isna()) | 
-                    (dashboard_filtered_df["Deadline"].dt.date >= today)
+                    (dashboard_filtered_df["Deadline"] >= today_pd)
                 ]
                 st.metric("Open Grants", len(open_grants))
             
@@ -535,7 +552,8 @@ else:
             
             # Only show grants with future deadlines
             today = datetime.datetime.now().date()
-            future_deadlines = upcoming_deadlines[upcoming_deadlines["Deadline"].dt.date >= today].head(5)
+            today_pd = pd.to_datetime(today)
+            future_deadlines = upcoming_deadlines[upcoming_deadlines["Deadline"] >= today_pd].head(5)
             
             if not future_deadlines.empty:
                 for i, row in future_deadlines.iterrows():
@@ -552,13 +570,14 @@ else:
             
             # Count grants by status
             today = datetime.datetime.now().date()
+            today_pd = pd.to_datetime(today)
             open_grants = len(dashboard_filtered_df[
                 (dashboard_filtered_df["Deadline"].isna()) | 
-                (dashboard_filtered_df["Deadline"].dt.date >= today)
+                (dashboard_filtered_df["Deadline"] >= today_pd)
             ])
             closed_grants = len(dashboard_filtered_df[
                 (~dashboard_filtered_df["Deadline"].isna()) & 
-                (dashboard_filtered_df["Deadline"].dt.date < today)
+                (dashboard_filtered_df["Deadline"] < today_pd)
             ])
             no_deadline = len(dashboard_filtered_df[dashboard_filtered_df["Deadline"].isna()])
             
