@@ -24,13 +24,17 @@ st.set_page_config(
 # Custom CSS for Pursuit branding and mobile responsiveness
 st.markdown("""
 <style>
-    /* Pursuit purple color for buttons and accents */
+    /* Pursuit purple color for buttons and accents - matching Pursuit.org */
     .stButton>button {
         background-color: #4B46E9;
         color: white;
         border-radius: 4px;
-        padding: 0.5rem 1rem;
+        padding: 0.75rem 1.5rem;
         border: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 14px;
     }
     .stButton>button:hover {
         background-color: #3f3ac1;
@@ -40,11 +44,64 @@ st.markdown("""
     .block-container {
         padding-top: 1rem;
         padding-bottom: 1rem;
+        max-width: 1200px;
+        margin: 0 auto;
     }
     
-    /* Heading colors */
+    /* Heading colors and fonts to match Pursuit.org */
     h1, h2, h3 {
         color: #4B46E9;
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 700;
+    }
+    
+    h1 {
+        font-size: 2.5rem;
+        letter-spacing: -0.5px;
+    }
+    
+    h2 {
+        font-size: 2rem;
+        letter-spacing: -0.3px;
+    }
+    
+    h3 {
+        font-size: 1.5rem;
+        letter-spacing: -0.2px;
+    }
+    
+    /* Link styling */
+    a {
+        color: #4B46E9;
+        text-decoration: none;
+    }
+    
+    a:hover {
+        text-decoration: underline;
+    }
+    
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background-color: #f8f9fa;
+        border-right: 1px solid #eee;
+    }
+    
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 1px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        border-radius: 4px 4px 0 0;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background-color: #4B46E9 !important;
+        color: white !important;
+        font-weight: bold;
     }
     
     /* Responsive styling for mobile */
@@ -69,6 +126,14 @@ st.markdown("""
         .css-ocqkz7, .css-1lcbmhc {
             margin-bottom: 1rem;
         }
+        
+        h1 {
+            font-size: 1.8rem;
+        }
+        
+        h2 {
+            font-size: 1.5rem;
+        }
     }
     
     /* Grant cards styling */
@@ -77,6 +142,12 @@ st.markdown("""
         border: 1px solid #e0e0e0;
         margin-bottom: 0.75rem;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        transition: all 0.2s ease;
+    }
+    
+    div[data-testid="stExpander"]:hover {
+        border-color: #4B46E9;
+        box-shadow: 0 2px 5px rgba(75, 70, 233, 0.1);
     }
     
     /* Status indicators */
@@ -95,20 +166,22 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Page title with Pursuit logo
-col1, col2 = st.columns([1, 5])
-
-with col1:
-    # Display Pursuit logo with custom size
-    st.image("attached_assets/Pursuit Logo Purple.png", width=120)
-
-with col2:
-    st.title("Pursuit Grant Scanner")
-    st.markdown("""
-    This tool scans and displays active grant opportunities that Pursuit may be eligible for, 
-    filtered by criteria that match our mission: workforce development, tech training, 
-    economic mobility, and geographic focus.
-    """)
+# Page title with Pursuit branding - styled like pursuit.org
+st.markdown("""
+<div style="background-color: #FFFFFF; padding: 20px 0; border-bottom: 1px solid #eaeaea; margin-bottom: 20px;">
+    <div style="display: flex; align-items: center; max-width: 1200px; margin: 0 auto;">
+        <div style="margin-right: 20px;">
+            <img src="data:image/png;base64,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" width="110">
+        </div>
+        <div>
+            <h1 style="color: #4B46E9; margin-bottom: 5px; font-size: 2.5rem; font-weight: 700;">Pursuit Grant Scanner</h1>
+            <p style="margin-top: 0; color: #333; font-size: 1.1rem;">This tool scans and displays active grant opportunities that Pursuit may be eligible for, 
+            filtered by criteria that match our mission: workforce development, tech training, 
+            economic mobility, and geographic focus.</p>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # Navigation - Add tabs for different views
 tab1, tab2 = st.tabs(["Grant Listings", "Dashboard"])
@@ -808,13 +881,14 @@ else:
 
 # Footer
 st.markdown("---")
-footer_col1, footer_col2 = st.columns([1, 5])
-
-with footer_col1:
-    st.image("attached_assets/Pursuit Logo Purple.png", width=60)
-    
-with footer_col2:
-    st.markdown("""
-    <div style="color: #4B46E9; font-weight: bold;">Pursuit Grant Scanner</div>
-    <div style="font-size: 0.8em;">© 2025 Pursuit - Made with 💜 to help find grant opportunities</div>
-    """, unsafe_allow_html=True)
+st.markdown("""
+<div style="display: flex; align-items: center; max-width: 1200px; margin: 20px auto; padding: 0 20px;">
+    <div style="margin-right: 20px;">
+        <img src="data:image/png;base64,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" width="60">
+    </div>
+    <div>
+        <div style="color: #4B46E9; font-weight: bold; font-size: 1.1rem;">Pursuit Grant Scanner</div>
+        <div style="font-size: 0.8em;">© 2025 Pursuit - Evolve or Die | Rethink Priors | Days, Not Weeks | Build In Public</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
