@@ -1,0 +1,860 @@
+Grant Scanner Tool (Phase 1 MVP)
+
+Project Summary
+Build a **web-based grant scanner** that displays active funding opportunities Pursuit may be eligible for. It will pull data from **government, corporate, and foundation sources**, filtered to match our criteria: workforce development, adult learners, tech training, economic mobility, and New York/U.S. geography.
+
+Key Features
+- Scan top grant websites to pull **current open calls**
+- Display in a **searchable, filterable, interactive dashboard**
+- Tag each grant by:
+  - Geography: NY / National
+  - Topic: Workforce / Tech / Economic Mobility
+  - Audience: Adults (24+), low-income
+  - Funder type: Government / Corporate / Foundation
+- Sort and filter by tag or deadline
+- Add button to export (CSV) or Share (Slack, Email)
+
+🧩 Data Sources to Scrape/API
+
+ 🟦 Government (via API/scraping)
+- [Grants.gov](https://www.grants.gov) → use `search2` API
+- [New York State Grants Gateway](https://grantsmanagement.ny.gov/) → scrape with Playwright/Selenium
+
+Philantrhopy (separate corporate and foundation segments)
+- 
+---
+
+AARP Foundation
+Abbvie
+Abbvie Foundation
+ABNY
+Abny Foundation Inc
+Abrams Foundation Inc
+Accel
+Accenture
+Acorns
+Adobe
+ADP
+Adp Foundation
+Aetna
+Ainslie Foundation
+Akamai Foundation Inc
+Alfred P. Sloan Foundation
+Allegis Group Foundation
+Allegis Group Foundation Inc
+AlleyCorp
+Allstate Foundation
+Alphadyne Asset Management
+Altman Foundation
+Amalgamated Charitable Foundation Inc
+Amazon
+American Endowment Foundation
+American Express
+American Express Foundation
+American Heart Association
+American Idea Foundation Inc
+American Online Giving Foundation Inc
+American Student Assistance (Massachusetts Higher Education Assistance Corporation)
+Amica Companies Foundation
+Amplify Her Foundation
+Anderman Family Foundation
+Ann Theodore Foundation
+Anna Carolina and Soo Kim Foundation
+Anna-Maria and Stephen Kellen Foundation
+Anna-Maria and Stephen Kellen Foundation Inc C/o Joel E Sammet & Co LLP
+Annie E. Casey Foundation
+Anthropic
+Apex Foundation
+Apollo
+Apollo Global Management
+Apollo Opportunity Foundation
+Aps Foundation Inc
+Arakawa Foundation
+ARBOR BROTHERS INC
+Arbor Rising (Brothers)
+Ardian Us Foundation Inc
+Ares Charitable Foundation
+Ares Foundation
+Ares Management Foundation
+Arizona Community Foundation
+Arnold Ventures
+Arrow Impact
+Ascendium
+Ascendium Education
+Ascendium Education Group
+Ascension Health Alliance
+AT&T
+At&t Foundation
+Atlassian
+Atlassian Foundation
+Autodesk
+Aven Foundation
+Bain Capital Children's Charity Ltd
+Bain Capital Ventures
+Baird Foundation Inc
+Ballmer Group
+Baltimore Community Foundation
+Bank of America
+Bank of America Charitable Foundation
+Bank of America?
+Barnabas Health Inc
+Barton Family Foundation
+Bd Foundation Inc
+Bell Charitable Foundation
+Bernard F & Alva B Gimbel Foundation Inc
+Beth and Ravenel Curry Foundation
+Betterment
+Betty and Davis Fitzgerald Foundation, Inc.
+Bezos Family Foundation
+Biella Foundation
+BILL & MELINDA GATES FOUNDATION
+Black Family Philanthropies
+Blackbaud
+Blackrock
+Blackstone
+Block (formerly Square)
+Block.one
+Bloomberg
+Bloomberg (Mike) Household
+Bloomingdale's
+Blue Meridian Partners Inc
+BNY
+BNY Mellon
+BNY Mellon Foundation
+Boone Family Foundation
+Booth Ferris Foundation
+Booz Allen Foundation
+Boston Bullpen Project Inc
+Brad and Danielle Tilden Family Foundation (c/o Kovark & Kim Pllc)
+Breyer Family Foundation
+Bright Funds Foundation
+Broadridge
+Broadridge Foundation C/o Broadridge Financial Solutions
+Brooklyn Org
+BSE Global
+Buffalo Sabres (NHL)
+Bumble
+Byrne Family Foundation Trust
+C D Spangler Foundation Inc
+California Community Foundation
+California Endowment
+California Physicians' Service Foundation DBA Blue Shield of California Foundation
+Cameo
+capital one
+Capital Workforce Partners, Inc.
+Carl B and Florence E King Foundation
+Carlyle
+Carnegie Corporation of New York
+Carnegie Corporation of NY
+Carroll and Milton Petrie Foundation
+Carson Fam Charitable Trust
+Caterpillar Foundation
+CBRE
+Centene Foundation
+Centerview Partners
+Charina Endowment Fund Inc
+Charities Aid Foundation of America
+Charles and Helen Schwab Foundation
+Charles Hayden Foundation
+Charles Koch Foundation
+Chavez Family Foundation
+Check Point Software
+Chicago Foundation for Women
+Chime
+Chubb
+Chubb Charitable Foundation
+Cigna Health Insurance
+Circle of Service Foundation
+Citi
+Citi Foundation
+Citizens Bank
+Citizens Charitable Foundation
+Citizens Philanthropic Foundation Inc
+Citizens?
+Citybridge Foundation
+Claneil Foundation
+Clark Charitable Foundation Inc DBA a James & Alice B Clark Foundation
+Clark Foundation
+ClassPass
+Cobbworks Inc
+Coca-Cola Foundation Inc.
+Cognizant
+Cognizant US Foundation
+College Board
+College Futures Foundation
+Colonel Stanley R Mcneil Foundation
+Colorado Gives Foundation (formerly Community First Foundation)
+Columbus Foundation
+Combined Jewish Philanthropies of Greater Boston, Inc.
+Comcast
+Comic Relief Inc.
+Communities Foundation of Texas, Inc.
+Community Foundation for Greater Atlanta
+Community Foundation for Southeast Michigan
+Community Foundation of New Jersey
+Con Edison
+ConEd
+ConEdison
+Connelly Foundation
+Connolly Family Foundation Inc
+Conrad N Hilton Foundation
+Consumers Energy Foundation
+Cortex
+Costco
+Craig Newmark Foundation
+Crankstart Foundation
+Credit Suisse Americas Foundation
+Credit Unions in the State of Washington
+CrowdStrike
+Cvs Health Foundation
+Darktrace
+Daves Killer Bread Foundation
+Dayton Foundation Plus Inc
+Delaware Community Foundation
+Deloitte
+Dennis M Jones Family Foundation Formerly Dennis & Judith Jones Char Fd T
+Desai Sethi Foundation Inc
+Deutsche Bank
+Deutsche Bank Americas Foundation
+Deutsche Bank?
+Diane and Bruce Halle Foundation
+Digital Harbor Foundation
+Disabled American Veterans Charitable Service Trust, Inc.
+Docusign
+Donald a Pels Charitable Trust Utd 8/18/92 C/o Pkf O'connor Davies
+Doran Family Foundation
+Dorot Foundation
+Draper Richards Kaplan Foundation
+Dropbox
+Dw Gore Family Foundation
+E Schwartz Charitable Foundation
+E Schwartz Charitable Foundation Xxxxx7006
+East Bay Community Foundation
+Ecmc Foundation
+Ecw Giving Foundation Inc
+Edgerley Family Foundation
+Education Leaders of Color Inc
+Edward & Ellen Roche Relief Foundation
+Edward Jones
+Elastic
+Elbridge Stuart Foundation DBA Stuart Foundation
+Elizabeth Morse Genius Charitable Trust
+Emerson Charitable Trust
+Emerson Collective
+Emma G. Harris Foundation
+Empire State Development
+Endaoment
+Endeavor
+Enphase Energy
+Enterprise Community Partners Inc.
+EQT Partners
+Equitable Foundation Inc
+Ernst & Young (EY)
+Ernst & Young Foundation
+Esping Family Foundation
+Etsy
+Eugene V and Clare E Thaw Charitable Trust
+Expedia
+F5
+Fairfield County's Community Foundation
+Fidelity
+Fidelity Foundation
+Fifth Third Bank
+Finish Line Foundation
+Finnegan Family Foundation
+First Eagle Investments Foundation
+First Solar
+Fis Foundation Inc
+Fitzgerald (William) Household
+Flex Foundation (f/k/a Flextronics Foundation)
+Focusing Philanthropy
+Focusing Philanthropy Inc
+Ford Foundation
+Fortinet
+Foundation For The Carolinas
+Fox Rock Foundation C/o Robert T & Karen Hale Jr
+France-Merrick Foundation Inc
+Friese Foundation
+Gap Inc.
+Garcia Family Foundation Inc
+Gates Foundation
+GEICO
+General Atlantic
+Geoffrey C Hughes Foundation Inc
+Gilead Foundation
+Gitlab Foundation
+Givengain Foundation USA
+GoDaddy
+GoFundMe.org
+Goldman Sachs
+Goldman Sachs Philanthropy Fund
+Goodnation Foundation
+Google
+Google.org
+Gray Foundation C/o the Ayco Company Lp
+Greater Cincinnati Foundation
+GREATER TEXAS FOUNDATION
+Greater Washington Community Foundation
+Greenbridge Family Foundation
+Greenlight Fund Inc.
+Gucci
+Gula Tech Foundation Inc
+Hagedorn Fund
+Handshake
+Harbor Fund
+Hard Rock
+Harman Family Foundation C/o Dressler Associates
+Harry and Jeanette Weinberg Foundation
+Hasbro Foundation Inc
+Hearst
+Hearst Foundation
+Hearst Foundations
+Hearthland Foundation
+Heckscher Foundation
+Helen Pumphrey Denit Charitable Trust
+Heron Foundation
+Highland Partners Charitable Fund
+Hillman Family Foundations
+Hilton Foundation
+Hinge
+Hispanic Federation
+Hopper-Dean Foundation C/o Catalyst Family Office LLC
+Houston Endowment Inc
+HSBC
+Hsjk Foundation Inc
+IBM International Foundation
+Iconiq
+Imaginable Futures
+Imc Chicago Charitable Foundation
+ImpactAssets
+Incyte Charitable Giving Foundation
+Ingram-White Castle Foundation
+Inherent Foundation
+Insight Partners
+Intel
+International Rescue Committee, Inc.
+Intuit
+Ira DeCamp Foundation
+Ira W. De Camp Foundation
+J B Fuqua Foundation Inc
+Jain Family Institute (JFI)
+James and Judith K. Dimon Foundation
+James J Pallotta Charitable Trust
+Janey Fund Charitable Trust
+JetBlue
+JetBrains Foundation
+Jewish Communal Fund
+Jewish Community Federation of San Francisco the Peninsula Marin & Sonoma
+Jobs For The Future Inc
+Jobsfirstnyc
+John and Marcia Goldman Foundation
+John S. and James L. Knight Foundation, Inc.
+Joseph B Whitehead Foundation
+JPMorgan Chase (JPMC)
+Jpmorgan Chase Foundation
+Kaiser Foundation Health Plan of Georgiainc
+Kaiser Foundation Health Plan of the Mid-Atlantic States Inc
+Kaphan Foundation
+Kapor Capital
+Karin Bain and John Kukral Foundation
+Kate Spade New York Foundation
+Key Lime Foundation
+Kingsbury Road Charitable Foundation
+KKR
+Kla Foundation
+KnowledgeWorks Foundation
+Koret Foundation
+KPMG U.S. Foundation, Inc.
+KPMG US
+L&l Foundation
+Laura and John Arnold Foundation
+Lawrence Foundation
+Lego Community Fund US Inc
+Leon Lowenstein Foundation Inc
+Leslie Family Foundation
+Liberty Mutual Foundation
+Life Science Cares, Inc.
+Lincoln Financial Foundation Inc
+Linde Family Foundation C/o Eric Riak - Cibc Private Wealth Mgmt
+Link Logistics
+LinkedIn
+LISC
+Llewellyn Family Foundation
+Lloyd a Fry Foundation
+Local Initiatives Support Corp.
+Loeb Charitable Foundation
+London Stock Exchange Group
+Lone Pine Foundation
+Lone Pine Foundation Inc
+Long Island Ducks
+LOreal
+Louis and Anne Abrons Foundation Inc
+Lukaj Foundation Inc C/o Bank Street
+Lululemon
+Lumina Foundation
+Lumina Foundation for Education Inc
+M&T Bank
+M&t Charitable Foundation
+MacArthur Foundation
+Macquarie
+Margaret a Meyer Family Foundation Inc
+Marguerite Casey Foundation
+Marin Community Foundation
+Mastercard
+Mathis Pfohl Foundation
+Maverick Capital Foundation
+May and Stanley Smith Charitable Trust
+Mayer and Morris Kaplan Foundation
+Meadows Foundation Inc
+Medina Foundation
+Mellen Charitable Foundation (fka Tf Fdn) C/o Paul Mccoy Family Office Services
+Memorial Sloan Kettering Cancer Center
+Merck
+Meta (formerly Facebook)
+Metlife Foundation
+Michael & Susan Dell Foundation
+Michelson Medical Research Foundation Inc
+Michelson Philanthropies Inc
+Microsoft
+Milstein (Michael) Household
+Mission 44
+Missouri Children's Trust Fund
+Mizuho
+Mizuho Americas
+Moccasin Lake Foundation
+Moderna Charitable Foundation
+Moody's
+Morgan Stanley
+Morgan Stanley Global Impact Funding Trust Inc
+Morningstar
+Mother Cabrini Health Foundation
+Motorola Solutions Foundation
+Mozilla Foundation
+Mussafer Family Foundation
+NaHCO3 (Sodium Bicarbonate)
+National Basketball Association Foundation
+National Football League
+National Grid Foundation
+National Philanthropic Trust
+National Science Foundation
+National Telecommunication & Information Administration (NTIA)
+NBA Foundation
+NCR Corporation
+Ncr Foundation
+NEO Philanthropy
+NEW AMERICA FOUNDATION
+New Hampshire Charitable Foundation
+New Profit
+New York City Council
+New York City Council District 02 - Carlina Rivera
+New York City Council District 04 - Keith Powers
+New York City Council District 05 - Julie Menin
+New York City Council District 06 - Gale Brewer
+New York City Council District 08 - Diana Ayala
+New York City Council District 12 - Kevin Riley
+New York City Council District 17 - Rafael Salamanca Jr.
+New York City Council District 18 - Amanda Farias
+New York City Council District 21 - Francisco Moya
+New York City Council District 23 - Linda Lee
+New York City Council District 25 - Shekar Krishnan
+New York City Council District 26 - Julie Won
+New York City Council District 27 - Nantasha Williams
+New York City Council District 28 - Adrienne Adams
+New York City Council District 29 - Lynn Schulman
+New York City Council District 30 - Robert Holden
+New York City Council District 34 - Jennifer Gutiérrez
+New York City Council District 44
+New York City Council District 47 - Justin Brannan
+New York City Council District 51 - Joseph Borelli
+New York City Economic Development Corporation
+New York City FC (MLS)
+New York Community Trust
+New York Community Trust aka Community Funds, Inc.
+New York Jets (NFL)
+New York Knicks
+New York Rangers (NHL)
+New York Red Bulls (MLS)
+New York Times
+New York Yankees
+NextEra Energy
+Nick & Michele Keller Family Foundation
+Nielsen
+Nike
+Nina Mason Pulliam Charitable Trust
+Nordstrom
+Nvidia
+NYC Workforce Funders
+NYCT
+NYS Assembly District 12 - Michael Gianaris
+NYS Assembly District 13 - Jessica Ramos
+NYS Assembly District 14 - Leroy Comrie
+NYS Assembly District 15 - Joe Addabbo
+NYS Assembly District 28 - Liz Krueger
+NYS Assembly District 33 - Clyde Vanel
+NYS Assembly District 34 - Jessica Gonzalez-Rojas
+NYS Assembly District 34 - Nathalia Fernandez
+NYS Assembly District 35 - Larinda Hooks
+NYS Assembly District 37 - Claire Valdez
+NYS Assembly District 43 - Brian Cunningham
+NYS Assembly District 60 - Nikki Lucas
+NYS Assembly District 73 - Alex Bores
+NYS Assembly District 78 - George Alvarez
+NYS Assembly District 80 - John Zaccaro, Jr
+NYS Assembly District 86 - Yudelka Tapia
+NYS Assembly District 87 - Karines Reyes
+Oak Foundation
+Obcc Othello Qalicb
+Omidyar Network
+One8 Foundation
+Oneten Coalition
+OpenAI
+Opportunity AI
+Oracle
+Orsted
+P16Plus Council of Greater Bexar County Foundation Inc
+Palantir
+Palo Alto Networks
+Patrick J McGovern
+Paul M Angell Family Foundation
+PayPal Giving Fund
+Pdb Foundation
+PDT Partners
+PEACOCK FOUNDATION INC
+PepsiCo
+Petrie Foundation
+Pfau Charitable Foundation
+Pga Tour Inc
+Philanthropi Charitable
+Phoenix Community Development and Investment Corporation
+Pinkerton Foundation
+Pinterest
+Polk Bros Foundation
+PPL Foundation
+Pricewaterhouse Coopers (PwC)
+Pricewaterhousecoopers Charitable Foundation Inc
+Prologis Foundation
+Prudential
+Public Benefit Innovation Fund
+Public Finance Initiative
+Quad Family Foundation
+Quincy and Estine Lee Char Fnd Fb992
+Rainwater Charitable Foundation
+Ramaswamy Bansal Family Foundation
+Raymond James Charitable Endowment Fund
+Reddit
+REDF
+Reebok
+Reebok Foundation Inc
+Regional Business Council
+Reitman Foundation
+Richard & Susan Smith Family Foundation
+Richard E & Nancy P Marriott Foundation
+Richard K Lubin Family Foundation
+Richard King Mellon Foundation
+Riley Mabel Louise Trust Uwill
+Rio Vista Foundation
+Riot Games
+Rise8
+Rise8 Foundation C/o Acadia Family Office
+Rising Tide Foundation
+Robert and Ardis James Foundation Inc
+Robert Sterling Clark Foundation Inc
+Robert Wood Johnson Foundation
+Robin Hood
+Robin Hood Foundation
+Rockefeller Foundation
+Rockefeller Philanthropy Advisors, Inc.
+RWN Management
+S&p Global Foundation FKA the Mcgraw-Hill Research Foundation
+S&P Global Ratings
+Salesforce
+Salesforce Foundation
+Samvid Ventures
+San Joaquin A Plus Inc
+Santander Consumer USA Inc Foundation
+Sarah W Rollins Charitable Trust Dated
+Sartain Lanier Family Foundation
+Schmidt Sciences
+Schultz Family Foundation
+Schultz Family Foundation 
+Schwab Charitable Fund
+Sea Cove Foundation Inc
+Seattle Foundation
+Select Equity Group Foundation
+Sequoia Capital
+Sergey Brin Family Foundation
+Sergey Brin Family Foundation C/o Pacific Foundation Services
+ServiceNow
+Shelby Cullom Davis Charitable Fund Inc
+Shihara Family Foundation
+Sid W Richardson Foundation
+Siegel Family Endowment
+Silicon Valley Community Foundation
+Silver Family Foundation
+Silver Lake
+Simpkins Lee Foundation
+Skillshare
+SkillUp Coalition
+Snap Foundation
+Snap Inc.
+SOBRATO FAMILY FOUNDATION
+Social Finance, Inc.
+SoftBank Vision Fund
+Solon E Summerfield Foundation Inc
+Sony
+Sorenson Impact Foundation
+Sperling Family Charitable Foundation
+Spotify
+Stand Together Foundation
+Stand Together/Koch Foundation
+Standard Industries
+Starbucks
+State Street Foundation Inc
+STEVEN & ALEXANDRA COHEN FOUNDATION INC
+Stonegrodd Family Foundation
+Strada
+Strada Education Foundation
+Strada Education Network Inc
+Stupski Foundation
+Sunny & Abe Rosenberg Foundation Inc
+Sunrun
+Surdna Foundation
+Synchrony
+T. Rowe Price Foundation, Inc.
+Taco Bell Foundation
+TACO BELL FOUNDATION INC
+Tanner Charitable Trust
+Target
+Tarsadia Foundation
+TD Bank
+TD Bank / TD Charitable Foundation
+Tenacre Foundation
+Terrapin Station Foundation
+Tesla
+Texas Mutual Insurance Company
+Textron Charitable Trust
+The Abell Foundation Inc
+The Achelis & Bodman Foundation
+The Addy Foundation
+The Allstate Foundation
+The Alphadyne Foundation
+The Annie E. Casey Foundation
+The Applebaum Foundation Inc
+The Archewell Foundation
+The Arthur M Blank Family Foundation
+The Aspen Institute
+The Atlanta Women's Foundation, Inc.
+The Ayco Charitable Foundation
+The Barclays Charitable Trust
+The Barker Welfare Foundation
+The Barry S Sternlicht Foundation
+The Batchelor Foundation Inc
+The Blackbaud Giving Fund
+The Blackrock Charitable Foundation
+The Blackstone Charitable Foundation
+The Bloomberg Family Foundation Inc
+The Boston Foundation
+The Bronx Community Foundation
+The Bulens Family Foundation
+THE CALIFORNIA WELLNESS FOUNDATION
+The Carroll and Milton Petrie Foundation
+The Carroll and Milton Petrie Foundation Inc C/o Brandman at Stroock
+The Chicago Community Trust
+The Claneil Foundation
+The Clark Foundation
+The Cleveland Avenue Foundation for Education Group
+The Coach Foundation Inc
+The Colorado Health Foundation
+The Comcast Nbcuniversal Foundation
+The Community Foundation for Northern Virginia
+The D J Mcmanus Foundation Inc
+The David Belk Cannon Foundation
+The Davis Family Foundation Inc
+The Duffey Foundation Inc
+The Edgerley Family Foundation
+The Eugene Mcdermott Foundation
+The F&i US Foundation
+The Ford Foundation
+The Francine a Lefrak Foundation Inc
+The Francine A. LeFrak Foundation
+The Frederick A. DeLuca Foundation, Inc.
+The Fremont Group Foundation
+The Goldman Sachs Charitable Gift Fund
+The Harry and Jeanette Weinberg Foundation Inc
+The Hearst Foundation
+The Heckscher Foundation for Children
+The Henry and Ruth Blaustein Rosenberg Foundation Inc
+The Horace W Goldsmith Foundation
+The Horwitz Family Memorial Foundation
+The IRA Decamp Foundation Xxxxx2009
+The James Family Charitable Foundation
+The James Irvine Foundation
+The Jeffrey H and Shari L Aronson Family Foundation
+The Jim Moran Foundation
+The Joyce Foundation
+The Kadens Family Foundation
+The Kimball Foundation
+The Klarman Family Foundation
+The Kresge Foundation
+The Laurie M Tisch Foundation Inc
+The Lawrence Foundation C/o Hertz Herson CPA LLP
+The Lenfest Foundation Inc
+The Mahoney Family Foundation
+The Malcolm Hewitt Wiener Foundation
+The Manufacturing Institute
+The Mccance Foundation
+The Meg and Bennett Goodman Family Foundation
+The Miami Foundation
+The Michael and Susan Dell Foundation
+The Mooney-Reed Charitable Foundation
+THE MORRIS AND GWENDOLYN CAFRITZ FOUNDATION
+The Muse Family Foundation
+The New York and Presbyterian Hospital
+The New York Community Trust
+The Nielsen Foundation Inc
+The Osterman Family Foundation
+The Oxl Foundation C/o Scs Financial
+The Patrick J Mcgovern Foundation Inc
+The Patrick J. McGovern Foundation
+The Pittsburgh Foundation
+The Price Family Foundation
+The Primerica Foundation
+THE PROVIDENT BANK FOUNDATION
+The Prudential Foundation
+The Ralph C Wilson Jr Foundation
+The Ralph M. Parsons Foundation
+The Reeder Foundation C/o Par Capital Management
+The Resslergertz Foundation
+The Rhode Island Community Foundation
+The Rich Foundation Inc
+The Robert and Michelle Cooke Atchinson Foundation
+The Salem Foundation
+The Shapiro Foundation
+The Sidman Family Foundation Inc
+The Silicon Valley Bank Foundation
+The Smart Family Fund
+The Stainman Family Foundation Inc
+The Starbucks Foundation
+The Starr Foundation
+The Staten Island Foundation
+The Strandberg Family Foundation C/o Jeffrey C Kirwood
+The Warburg Pincus Foundation
+The Wilf Family Foundation
+The William R Orthwein Jr and Laura Rand Orthwein Foundation Inc
+The William Zimmerman Foundation
+The Zegar Family Foundation
+Thomas a Rodgers Jr Family Foundation
+Thomas and Jeanne Elmezzi Foundation
+Thomas and Jeanne Elmezzi Private Foundation
+Thomas M Helen Mckee & John P Ryan Fo John P Ryan Foundation Inc
+Thompson
+Thompson Family Foundation
+Thunderbirds Charities
+Tiger Foundation
+TikTok
+Tipping Point Community
+Tll Temple Foundation
+Toast Inc
+Tom Russell Charitable Foundation Inc
+Travelers
+Trinity Church
+Trinity Church Wall Street
+Truist Foundation
+Trust Uw Jacob Schmidlapp #1
+U.S. Bank
+Uber
+UBS
+Union Square Ventures (USV)
+United Jewish Appeal - Federation of Jewish Philanthropies of New York dba UJA-Federation of NY
+United States Economic Development Administration (EDA)
+United Way of Central Ohio
+United Way of Greater Atlanta, Inc.
+United Way of Greater Cincinnati
+United Way of Greater St. Louis Inc.
+UNITED WAY OF KING COUNTY
+United Way of Massachusetts Bay, Inc.
+United Way of Metropolitan Dallas, Inc.
+UNITED WAY OF NORTHEAST FLORIDA, INC.
+United Way of Rhode Island, Inc.
+United Way of Tarrant County
+Universal Music Group
+UPPER MANHATTAN EMPOWERMENT ZONE
+UPS
+Van Otterloo Family Foundation
+Vanguard
+Vanguard Charitable
+Venmo / Paypal
+Verizon
+Viking Global Foundation
+Vodafone Americas Foundation
+W.K. Kellogg Foundation
+Wagner Foundation
+Wal-Mart Foundation
+Walder Family Foundation
+Walgreens
+Walmart
+Walter and Elise Haas Fund
+Walther Foundation
+Walton Family Foundation
+Warbug Pincus
+Warner Music Group (WMG)
+Wayfair
+Weingart Foundation
+Welfare Foundation Inc
+Wellington Management Foundation
+Wells Fargo
+Wells Fargo Foundation
+West Baltimore Renaissance Foundation Inc
+Western Union Foundation
+Western Union Foundation Inc
+William and Flora Hewlett Foundation
+William J and Dorothy K O'neill Foundation Inc
+William Penn Foundation
+William R Kenan Jr Charitable Trust Xxxxx2004
+William Randolph Hearst Foundation
+William T. Grant Foundation
+Wilson Sheehan Foundation
+Workday Foundation
+Workforce Development Institute (WDI)
+World Education Services (WES) Mariam Assefa Fund
+World Education Services Inc
+World Wide Technology Foundation
+Wsfs Cares Foundation
+Wyss Foundation
+Yawkey Foundation II
+ZAKAT FOUNDATION OF AMERICA
+Zendesk
+Zendesk Charitable Foundation
+Zoom Video Communications
+Zygmunt and Audrey Wilf Foundation
+Inside Philanthropy
+Candid
+Chronicles of Philanthropy
+Stanford SSIR
+Instrumentl (Our Top Pick)
+Foundation Directory Online (aka Candid)
+Grants.gov
+GrantStation
+Devex Pro Funding
+GrantScape
+The Catholic Funding Guide
+GrantForward
+Grant Gopher
+Pivot
+GrantSelect
+GrantWatch
+Grants. Gov
+Foundation Center
+GrantWatch
+Charity Navigator
+National Council of Nonprofits
+The Grantsmanship Center
+Philanthropy News Digest
+Local Community Foundations
+State Government Assistance Websites
+Open Grants
+SecretSOS.net
+FreedFellowship.com
+EllievatedAcademy.com
+StartPivotGrow.com
+NASE.org
