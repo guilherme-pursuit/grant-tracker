@@ -64,22 +64,22 @@ def load_grants():
 # Function to fetch all grant opportunities
 def fetch_all_grants():
     with st.spinner("Fetching grant opportunities..."):
-        # Fetch grants from all sources
-        govt_grants = fetch_grants_gov_opportunities()
-        ny_grants = fetch_ny_grants_gateway_opportunities()
+        # Fetch grants from all sources - prioritize foundation and corporate
         foundation_grants = fetch_foundation_grants()
+        ny_grants = fetch_ny_grants_gateway_opportunities()
+        govt_grants = fetch_grants_gov_opportunities()
         
         # Track data sources
         sources = []
-        if not govt_grants.empty:
-            sources.append("Grants.gov")
-        if not ny_grants.empty:
-            sources.append("NY Grants Gateway")
         if not foundation_grants.empty:
             sources.append("Foundation Grants")
+        if not ny_grants.empty:
+            sources.append("NY Grants Gateway")
+        if not govt_grants.empty:
+            sources.append("Grants.gov")
             
-        # Combine all grants from actual sources
-        all_grants = pd.concat([govt_grants, ny_grants, foundation_grants], ignore_index=True)
+        # Combine all grants from actual sources - prioritize foundation and corporate by listing them first
+        all_grants = pd.concat([foundation_grants, ny_grants, govt_grants], ignore_index=True)
         
         # If we have data from external sources, process and display it
         if not all_grants.empty:

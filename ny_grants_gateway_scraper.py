@@ -140,6 +140,20 @@ def fetch_ny_grants_gateway_opportunities():
                 else:
                     # No title found, skip this element
                     continue
+                    
+                # Skip entries with generic or helper-text titles
+                skip_titles = [
+                    "click here", "page help", "tutorial", "help", "nysggportal", 
+                    "goportal", "login", "register", "pdf", "manual", "grantopportunities", 
+                    "mygrants", "learn more", "home", "back", "next"
+                ]
+                
+                if any(skip_word in title.lower() for skip_word in skip_titles):
+                    continue
+                    
+                # Skip entries that are too short to be meaningful
+                if len(title) < 10:
+                    continue
                 
                 # Extract link
                 link_element = (
@@ -162,6 +176,14 @@ def fetch_ny_grants_gateway_opportunities():
                             # Assume it's relative to the current URL
                             base_url = used_url if used_url else "https://grantsmanagement.ny.gov"
                             link = f"{base_url.rstrip('/')}/{link.lstrip('/')}"
+                
+                # Skip entries with links to manuals, tutorials, help pages or PDFs
+                if any(skip_item in link.lower() for skip_item in ['help', 'tutorial', 'manual', '.pdf']):
+                    continue
+                    
+                # If no valid link, skip this entry
+                if not link or link == "":
+                    continue
                 
                 # Extract other information
                 info_elements = grant_element.find_all("div", class_="views-field") or grant_element.find_all("div", class_="field")
@@ -197,7 +219,16 @@ def fetch_ny_grants_gateway_opportunities():
                     elif "Agency" in label_text or "Department" in label_text or "Issuer" in label_text:
                         grant_info["Funder"] = value
                 
-                opportunities.append(grant_info)
+                # Check if we have enough quality data to include this grant
+                found_data = False
+                
+                # Consider a grant valid if it has at least deadline or award amount and a meaningful description
+                if grant_info["Deadline"] or grant_info["Award Amount"]:
+                    found_data = True
+                
+                # Skip grants with default/placeholder values only
+                if found_data and len(grant_info["Description"]) > 25:
+                    opportunities.append(grant_info)
                 
             except Exception as e:
                 logging.warning(f"Error parsing grant element: {str(e)}")

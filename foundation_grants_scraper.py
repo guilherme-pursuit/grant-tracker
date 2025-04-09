@@ -184,8 +184,18 @@ def extract_grants_from_page(soup, base_url, foundation_name):
                     if el and len(el.get_text(strip=True)) < 200
                 ), "Untitled Grant Opportunity")
             
-            # Skip if title is too generic
-            if title.lower() in ["untitled", "grant", "opportunity", "program", "initiative"]:
+            # Skip if title is too generic or too short
+            if (title.lower() in ["untitled", "grant", "opportunity", "program", "initiative"]) or len(title) < 15:
+                continue
+                
+            # Skip entries with generic or helper-text titles
+            skip_titles = [
+                "click here", "page help", "tutorial", "help", "login", "register", 
+                "pdf", "manual", "learn more", "home", "back", "next",
+                "apply now", "submit", "contact", "about", "mission"
+            ]
+            
+            if any(skip_word in title.lower() for skip_word in skip_titles):
                 continue
                 
             # Extract link
@@ -199,6 +209,17 @@ def extract_grants_from_page(soup, base_url, foundation_name):
             else:
                 # If no link found, use base URL
                 link = base_url
+                
+            # Skip entries with links to non-grant pages
+            skip_links = ['help', 'tutorial', 'manual', '.pdf', 'about', 'contact', 'login']
+            if any(skip_item in link.lower() for skip_item in skip_links):
+                continue
+                
+            # If link is just the homepage, it's probably not a specific grant
+            if link == base_url:
+                # Only accept if title is very specific
+                if len(title) < 30:
+                    continue
             
             # Extract description
             description_element = (
@@ -271,13 +292,30 @@ def extract_grants_from_page(soup, base_url, foundation_name):
                 "Grant ID": f"FDN-{len(grants) + 1}"
             }
             
+            # Skip entries with inadequate descriptions
+            if description == "No description available. Please visit the website for more information." or len(description) < 30:
+                # Only keep if we have a good title, deadline AND award amount
+                if not (len(title) > 40 and deadline and award_amount):
+                    continue
+            
             # Check if grant is relevant to Pursuit's mission
             is_relevant = any(
                 keyword.lower() in title.lower() or keyword.lower() in description.lower()
                 for keyword in PURSUIT_KEYWORDS
             )
             
-            if is_relevant:
+            # Quality check - make sure we have at least some meaningful information
+            has_quality_data = False
+            
+            # Grant must have either deadline or award amount to be considered complete enough
+            if deadline or award_amount:
+                has_quality_data = True
+                
+            # Grant with very specific title and good description is also acceptable
+            if len(title) > 30 and len(description) > 100:
+                has_quality_data = True
+                
+            if is_relevant and has_quality_data:
                 grants.append(grant)
                 
         except Exception as e:
