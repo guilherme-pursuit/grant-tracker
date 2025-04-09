@@ -167,41 +167,81 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Page title with Pursuit Wordmark and branding
-st.markdown("""
-<div style="background-color: #4B46E9; padding: 24px 0; margin-bottom: 30px;">
-    <div style="display: flex; justify-content: center; align-items: center; max-width: 1200px; margin: 0 auto;">
-        <img src="attached_assets/Pursuit Wordmark White on Purple.png" alt="Pursuit Wordmark" style="max-width: 300px; height: auto;">
-    </div>
-</div>
+# Load images properly using Streamlit's image function
+from PIL import Image
+import os
 
-<div style="display: flex; align-items: center; max-width: 1200px; margin: 0 auto 20px auto; padding: 0 20px;">
-    <div style="margin-right: 20px;">
-        <img src="attached_assets/Pursuit Logo Purple.png" alt="Pursuit Logo" width="80">
+# Load the Pursuit Wordmark image
+try:
+    wordmark_path = os.path.join('attached_assets', 'Pursuit Wordmark White on Purple.png')
+    wordmark_img = Image.open(wordmark_path)
+    
+    # Create a container with purple background for the wordmark
+    wordmark_container = st.container()
+    with wordmark_container:
+        st.markdown("""
+        <div style="background-color: #4B46E9; padding: 24px 0; margin-bottom: 30px; display: flex; justify-content: center;">
+        </div>
+        """, unsafe_allow_html=True)
+        # Place the image in the center of the container
+        col1, col2, col3 = st.columns([1, 3, 1])
+        with col2:
+            st.image(wordmark_img, use_column_width=True)
+except Exception as e:
+    st.warning(f"Could not load Pursuit Wordmark image: {e}")
+    # Fallback header if image can't be loaded
+    st.markdown("""
+    <div style="background-color: #4B46E9; padding: 24px 0; margin-bottom: 30px; text-align: center;">
+        <h1 style="color: white; margin: 0;">PURSUIT</h1>
     </div>
-    <div>
+    """, unsafe_allow_html=True)
+
+# Load the Pursuit Logo image
+try:
+    logo_path = os.path.join('attached_assets', 'Pursuit Logo Purple.png')
+    logo_img = Image.open(logo_path)
+    
+    # Create header with logo and text
+    header_cols = st.columns([1, 5])
+    with header_cols[0]:
+        st.image(logo_img, width=80)
+    with header_cols[1]:
+        st.markdown("""
         <h1 style="color: #4B46E9; margin-bottom: 5px; font-size: 2.5rem; font-weight: 700;">Grant Scanner</h1>
         <p style="margin-top: 0; color: #333; font-size: 1.1rem;">This tool scans and displays active grant opportunities that Pursuit may be eligible for, 
         filtered by criteria that match our mission: workforce development, tech training, 
         economic mobility, and geographic focus.</p>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+except Exception as e:
+    st.warning(f"Could not load Pursuit Logo image: {e}")
+    # Fallback header without logo
+    st.markdown("""
+    <h1 style="color: #4B46E9; margin-bottom: 5px; font-size: 2.5rem; font-weight: 700;">Grant Scanner</h1>
+    <p style="margin-top: 0; color: #333; font-size: 1.1rem;">This tool scans and displays active grant opportunities that Pursuit may be eligible for, 
+    filtered by criteria that match our mission: workforce development, tech training, 
+    economic mobility, and geographic focus.</p>
+    """, unsafe_allow_html=True)
 
 # Navigation - Add button-based navigation instead of tabs
 if 'current_view' not in st.session_state:
     st.session_state.current_view = "Grant Listings"
 
-# Create a custom navigation bar with buttons
+# Navigation is now handled by the custom-nav-container below
+
+# Create a better navigation approach with CSS to hide the buttons
 st.markdown("""
 <style>
-    .nav-container {
+    /* Container for navigation buttons */
+    .custom-nav-container {
         display: flex;
         gap: 20px;
         margin-bottom: 30px;
         max-width: 1200px;
         margin: 0 auto 30px auto;
     }
-    .nav-button {
+    
+    /* Style for buttons */
+    .custom-nav-button {
         background-color: #f5f5f5;
         color: #333;
         border: 1px solid #ddd;
@@ -214,50 +254,55 @@ st.markdown("""
         flex: 1;
         transition: all 0.3s ease;
     }
-    .nav-button:hover {
+    
+    .custom-nav-button:hover {
         background-color: #e9e9e9;
         border-color: #ccc;
     }
-    .nav-button.active {
+    
+    .custom-nav-button.active {
         background-color: #4B46E9;
         color: white;
         border-color: #4B46E9;
     }
+    
+    /* Hide the actual Streamlit buttons */
+    div[data-testid="column"]:has(button[kind="secondary"]) {
+        visibility: hidden;
+        height: 0px;
+        position: fixed;
+        top: -1000px;
+    }
+    
     @media (max-width: 768px) {
-        .nav-container {
+        .custom-nav-container {
             flex-direction: column;
             gap: 10px;
         }
     }
 </style>
+"""
++ f"""
+<div class="custom-nav-container">
+    <div class="custom-nav-button {"active" if st.session_state.current_view == "Grant Listings" else ""}" 
+         onclick="document.querySelector('#grant-listings-btn').click()">
+        GRANT LISTINGS
+    </div>
+    <div class="custom-nav-button {"active" if st.session_state.current_view == "Dashboard" else ""}" 
+         onclick="document.querySelector('#dashboard-btn').click()">
+        DASHBOARD
+    </div>
+</div>
 """, unsafe_allow_html=True)
 
-# Create the navigation buttons
+# Create a row with two hidden buttons that will be triggered by the custom HTML
 col1, col2 = st.columns(2)
-
 with col1:
-    listings_active = "active" if st.session_state.current_view == "Grant Listings" else ""
-    if st.markdown(f"""<div class="nav-button {listings_active}" 
-                       onclick="document.querySelector('#grant-listings-btn').click()">
-                       GRANT LISTINGS
-                   </div>""", unsafe_allow_html=True):
-        pass
-    
-    # Hidden button that will be triggered by the custom HTML button
-    if st.button("Grant Listings", key="grant-listings-btn", use_container_width=True):
+    if st.button("Grant Listings", key="grant-listings-btn"):
         st.session_state.current_view = "Grant Listings"
         st.rerun()
-
 with col2:
-    dashboard_active = "active" if st.session_state.current_view == "Dashboard" else ""
-    if st.markdown(f"""<div class="nav-button {dashboard_active}" 
-                       onclick="document.querySelector('#dashboard-btn').click()">
-                       DASHBOARD
-                   </div>""", unsafe_allow_html=True):
-        pass
-    
-    # Hidden button that will be triggered by the custom HTML button
-    if st.button("Dashboard", key="dashboard-btn", use_container_width=True):
+    if st.button("Dashboard", key="dashboard-btn"):
         st.session_state.current_view = "Dashboard"
         st.rerun()
 
