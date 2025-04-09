@@ -186,7 +186,7 @@ try:
         # Place the image in the center of the container
         col1, col2, col3 = st.columns([1, 3, 1])
         with col2:
-            st.image(wordmark_img, use_column_width=True)
+            st.image(wordmark_img, use_container_width=True)
 except Exception as e:
     st.warning(f"Could not load Pursuit Wordmark image: {e}")
     # Fallback header if image can't be loaded
@@ -228,83 +228,62 @@ if 'current_view' not in st.session_state:
 
 # Navigation is now handled by the custom-nav-container below
 
-# Create a better navigation approach with CSS to hide the buttons
+# Use a simpler navigation approach with radio buttons styled as tabs
+selected_tab = st.radio("View", ["GRANT LISTINGS", "DASHBOARD"], horizontal=True, label_visibility="collapsed")
+
+# Map the selected tab to our session state view
+if selected_tab == "GRANT LISTINGS":
+    st.session_state.current_view = "Grant Listings"
+else:
+    st.session_state.current_view = "Dashboard"
+
+# Style the radio buttons to look like tabs
 st.markdown("""
 <style>
-    /* Container for navigation buttons */
-    .custom-nav-container {
-        display: flex;
+    /* Style the radio buttons to look like tabs */
+    div.row-widget.stRadio > div {
+        flex-direction: row;
+        align-items: center;
         gap: 20px;
-        margin-bottom: 30px;
-        max-width: 1200px;
-        margin: 0 auto 30px auto;
+        margin-bottom: 20px;
     }
     
-    /* Style for buttons */
-    .custom-nav-button {
+    div.row-widget.stRadio > div > label {
         background-color: #f5f5f5;
         color: #333;
         border: 1px solid #ddd;
         border-radius: 4px;
         padding: 10px 20px;
-        font-size: 16px;
         font-weight: 600;
-        cursor: pointer;
-        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         flex: 1;
+        min-width: 150px;
+        cursor: pointer;
         transition: all 0.3s ease;
     }
     
-    .custom-nav-button:hover {
+    div.row-widget.stRadio > div > label:hover {
         background-color: #e9e9e9;
-        border-color: #ccc;
     }
     
-    .custom-nav-button.active {
+    div.row-widget.stRadio > div [data-baseweb="radio"] > div:first-child {
+        display: none;
+    }
+    
+    div.row-widget.stRadio > div [data-testid="stMarkdownContainer"] {
+        font-size: 16px;
+    }
+    
+    /* Style the selected tab */
+    div.row-widget.stRadio > div [data-baseweb="radio"][aria-checked="true"] + label {
         background-color: #4B46E9;
         color: white;
         border-color: #4B46E9;
     }
-    
-    /* Hide the actual Streamlit buttons */
-    div[data-testid="column"]:has(button[kind="secondary"]) {
-        visibility: hidden;
-        height: 0px;
-        position: fixed;
-        top: -1000px;
-    }
-    
-    @media (max-width: 768px) {
-        .custom-nav-container {
-            flex-direction: column;
-            gap: 10px;
-        }
-    }
 </style>
-"""
-+ f"""
-<div class="custom-nav-container">
-    <div class="custom-nav-button {"active" if st.session_state.current_view == "Grant Listings" else ""}" 
-         onclick="document.querySelector('#grant-listings-btn').click()">
-        GRANT LISTINGS
-    </div>
-    <div class="custom-nav-button {"active" if st.session_state.current_view == "Dashboard" else ""}" 
-         onclick="document.querySelector('#dashboard-btn').click()">
-        DASHBOARD
-    </div>
-</div>
 """, unsafe_allow_html=True)
-
-# Create a row with two hidden buttons that will be triggered by the custom HTML
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("Grant Listings", key="grant-listings-btn"):
-        st.session_state.current_view = "Grant Listings"
-        st.rerun()
-with col2:
-    if st.button("Dashboard", key="dashboard-btn"):
-        st.session_state.current_view = "Dashboard"
-        st.rerun()
 
 # Initialize session state for storing the grants data
 if 'grants_data' not in st.session_state:
@@ -489,70 +468,102 @@ if st.session_state.grants_data is not None:
                 today = datetime.datetime.now().date()
                 two_weeks_later = today + datetime.timedelta(days=14)
                 
-                if selected_status == "Open":
-                    # Show only grants with deadlines in the future or no deadline
-                    today_pd = pd.to_datetime(today)
-                    
-                    # Convert dates safely for comparison
-                    open_filter = filtered_df["Deadline"].apply(lambda x: 
-                        pd.Timestamp(x.date()) >= today_pd if not pd.isna(x) else True)
-                    
-                    filtered_df = filtered_df[open_filter]
-                elif selected_status == "Closing Soon":
-                    # Show only grants with deadlines in the next two weeks
-                    today_pd = pd.to_datetime(today)
-                    two_weeks_later_pd = pd.to_datetime(two_weeks_later)
-                    
-                    # Convert dates safely for comparison
-                    closing_soon_filter = filtered_df["Deadline"].apply(lambda x: 
-                        pd.Timestamp(x.date()) >= today_pd and pd.Timestamp(x.date()) <= two_weeks_later_pd
-                        if not pd.isna(x) else False)
-                    
-                    filtered_df = filtered_df[closing_soon_filter]
-                elif selected_status == "Closed":
-                    # Show only grants with deadlines in the past
-                    today_pd = pd.to_datetime(today)
-                    
-                    # Convert dates safely for comparison
-                    closed_filter = filtered_df["Deadline"].apply(lambda x: 
-                        pd.Timestamp(x.date()) < today_pd if not pd.isna(x) else False)
-                    
-                    filtered_df = filtered_df[closed_filter]
+                # First check if "Deadline" column exists to avoid KeyError
+                if "Deadline" not in filtered_df.columns:
+                    st.sidebar.warning("Missing 'Deadline' column. Cannot filter by status.")
+                else:
+                    try:
+                        if selected_status == "Open":
+                            # Show only grants with deadlines in the future or no deadline
+                            today_pd = pd.to_datetime(today)
+                            
+                            # Convert dates safely for comparison
+                            open_filter = filtered_df["Deadline"].apply(lambda x: 
+                                pd.Timestamp(x.date()) >= today_pd if not pd.isna(x) else True)
+                            
+                            filtered_df = filtered_df[open_filter]
+                        elif selected_status == "Closing Soon":
+                            # Show only grants with deadlines in the next two weeks
+                            today_pd = pd.to_datetime(today)
+                            two_weeks_later_pd = pd.to_datetime(two_weeks_later)
+                            
+                            # Convert dates safely for comparison
+                            closing_soon_filter = filtered_df["Deadline"].apply(lambda x: 
+                                pd.Timestamp(x.date()) >= today_pd and pd.Timestamp(x.date()) <= two_weeks_later_pd
+                                if not pd.isna(x) else False)
+                            
+                            filtered_df = filtered_df[closing_soon_filter]
+                        elif selected_status == "Closed":
+                            # Show only grants with deadlines in the past
+                            today_pd = pd.to_datetime(today)
+                            
+                            # Convert dates safely for comparison
+                            closed_filter = filtered_df["Deadline"].apply(lambda x: 
+                                pd.Timestamp(x.date()) < today_pd if not pd.isna(x) else False)
+                            
+                            filtered_df = filtered_df[closed_filter]
+                    except Exception as e:
+                        st.sidebar.error(f"Error filtering by status: {str(e)}")
+                        st.sidebar.info("Some grants may not have deadline information.")
             
             if len(date_range) == 2:
-                start_date, end_date = date_range
-                # Only apply date filter to grants with deadlines
-                has_deadline = ~filtered_df["Deadline"].isna()
-                
-                # Convert dates to pandas datetime objects for comparison
-                start_date_pd = pd.to_datetime(start_date)
-                end_date_pd = pd.to_datetime(end_date)
-                
-                # Convert Deadline column to date format for comparison
-                # This handles the datetime64[ns] vs date comparison issue
-                deadline_filter = filtered_df["Deadline"].apply(lambda x: 
-                    pd.Timestamp(x.date()) >= start_date_pd and pd.Timestamp(x.date()) <= end_date_pd 
-                    if not pd.isna(x) else False)
-                
-                date_filter = deadline_filter
-                
-                # Keep rows where there's no deadline or the deadline is in range
-                # Convert boolean Series to numpy array to avoid type issues
-                date_mask = ~has_deadline.values | (has_deadline.values & date_filter.values)
-                filtered_df = filtered_df[date_mask]
+                # First check if the Deadline column exists
+                if "Deadline" not in filtered_df.columns:
+                    st.sidebar.warning("Missing 'Deadline' column. Cannot filter by date range.")
+                else:
+                    try:
+                        start_date, end_date = date_range
+                        # Only apply date filter to grants with deadlines
+                        has_deadline = ~filtered_df["Deadline"].isna()
+                        
+                        # Convert dates to pandas datetime objects for comparison
+                        start_date_pd = pd.to_datetime(start_date)
+                        end_date_pd = pd.to_datetime(end_date)
+                        
+                        # Convert Deadline column to date format for comparison
+                        # This handles the datetime64[ns] vs date comparison issue
+                        deadline_filter = filtered_df["Deadline"].apply(lambda x: 
+                            pd.Timestamp(x.date()) >= start_date_pd and pd.Timestamp(x.date()) <= end_date_pd 
+                            if not pd.isna(x) else False)
+                        
+                        date_filter = deadline_filter
+                        
+                        # Keep rows where there's no deadline or the deadline is in range
+                        # Convert boolean Series to numpy array to avoid type issues
+                        date_mask = ~has_deadline.values | (has_deadline.values & date_filter.values)
+                        filtered_df = filtered_df[date_mask]
+                    except Exception as e:
+                        st.sidebar.error(f"Error applying date filter: {str(e)}")
+                        st.sidebar.info("Some grants may not have deadline information.")
             
-            # Sort options
-            sort_options = ["Deadline (Closest)", "Deadline (Furthest)", "Award Amount (High to Low)", "Award Amount (Low to High)"]
-            sort_by = st.sidebar.selectbox("Sort By", sort_options)
+            # Sort options - dynamically adjust based on available columns
+            available_sort_options = []
             
-            if sort_by == "Deadline (Closest)":
-                filtered_df = filtered_df.sort_values("Deadline")
-            elif sort_by == "Deadline (Furthest)":
-                filtered_df = filtered_df.sort_values("Deadline", ascending=False)
-            elif sort_by == "Award Amount (High to Low)":
-                filtered_df = filtered_df.sort_values("Award Amount", ascending=False)
-            elif sort_by == "Award Amount (Low to High)":
-                filtered_df = filtered_df.sort_values("Award Amount")
+            # Add deadline-based sorting if available
+            if "Deadline" in filtered_df.columns:
+                available_sort_options.extend(["Deadline (Closest)", "Deadline (Furthest)"])
+            
+            # Add award amount sorting if available
+            if "Award Amount" in filtered_df.columns:
+                available_sort_options.extend(["Award Amount (High to Low)", "Award Amount (Low to High)"])
+                
+            # Add a default option if no columns are available for sorting
+            if not available_sort_options:
+                available_sort_options = ["No sorting available"]
+            
+            sort_by = st.sidebar.selectbox("Sort By", available_sort_options)
+            
+            try:
+                if sort_by == "Deadline (Closest)" and "Deadline" in filtered_df.columns:
+                    filtered_df = filtered_df.sort_values("Deadline")
+                elif sort_by == "Deadline (Furthest)" and "Deadline" in filtered_df.columns:
+                    filtered_df = filtered_df.sort_values("Deadline", ascending=False)
+                elif sort_by == "Award Amount (High to Low)" and "Award Amount" in filtered_df.columns:
+                    filtered_df = filtered_df.sort_values("Award Amount", ascending=False)
+                elif sort_by == "Award Amount (Low to High)" and "Award Amount" in filtered_df.columns:
+                    filtered_df = filtered_df.sort_values("Award Amount")
+            except Exception as e:
+                st.sidebar.error(f"Error sorting data: {str(e)}")
         except KeyError as e:
             st.sidebar.error(f"Error: Missing required column - {str(e)}")
             st.sidebar.info("The data may not have been properly loaded. Please try refreshing.")
@@ -811,33 +822,51 @@ else:
             funder_col1, funder_col2 = st.columns([3, 2])
             
             with funder_col1:
-                # Group by funder type and count grants
-                funder_type_counts = dashboard_filtered_df.groupby("Funder Type").size().reset_index(name="Count")
-                
-                # Create a bar chart of funder types
-                if not funder_type_counts.empty:
-                    st.bar_chart(funder_type_counts.set_index("Funder Type"))
-                else:
-                    st.info("No funder type data available.")
+                try:
+                    # Group by funder type and count grants
+                    if "Funder Type" in dashboard_filtered_df.columns:
+                        funder_type_counts = dashboard_filtered_df.groupby("Funder Type").size().reset_index(name="Count")
+                        
+                        # Create a bar chart of funder types
+                        if not funder_type_counts.empty:
+                            st.bar_chart(funder_type_counts.set_index("Funder Type"))
+                        else:
+                            st.info("No funder type data available.")
+                    else:
+                        st.warning("Missing 'Funder Type' column. Cannot display chart.")
+                except Exception as e:
+                    st.error(f"Error creating chart: {str(e)}")
             
             with funder_col2:
-                # Table of grants by funder type with average award
-                funder_summary = dashboard_filtered_df.groupby("Funder Type").agg({
-                    "Award Amount": ["mean", "max", "count"]
-                }).reset_index()
-                
-                # Flatten the multi-index columns
-                funder_summary.columns = ["Funder Type", "Avg. Award", "Max Award", "Count"]
-                
-                # Format the award amounts
-                funder_summary["Avg. Award"] = funder_summary["Avg. Award"].apply(
-                    lambda x: f"${x:,.2f}" if not pd.isna(x) else "N/A"
-                )
-                funder_summary["Max Award"] = funder_summary["Max Award"].apply(
-                    lambda x: f"${x:,.2f}" if not pd.isna(x) else "N/A"
-                )
-                
-                st.dataframe(funder_summary, use_container_width=True)
+                try:
+                    # Check if required columns exist
+                    if "Funder Type" in dashboard_filtered_df.columns and "Award Amount" in dashboard_filtered_df.columns:
+                        # Table of grants by funder type with average award
+                        funder_summary = dashboard_filtered_df.groupby("Funder Type").agg({
+                            "Award Amount": ["mean", "max", "count"]
+                        }).reset_index()
+                        
+                        # Flatten the multi-index columns
+                        funder_summary.columns = ["Funder Type", "Avg. Award", "Max Award", "Count"]
+                        
+                        # Format the award amounts
+                        funder_summary["Avg. Award"] = funder_summary["Avg. Award"].apply(
+                            lambda x: f"${x:,.2f}" if not pd.isna(x) else "N/A"
+                        )
+                        funder_summary["Max Award"] = funder_summary["Max Award"].apply(
+                            lambda x: f"${x:,.2f}" if not pd.isna(x) else "N/A"
+                        )
+                        
+                        st.dataframe(funder_summary, use_container_width=True)
+                    else:
+                        missing_cols = []
+                        if "Funder Type" not in dashboard_filtered_df.columns:
+                            missing_cols.append("Funder Type")
+                        if "Award Amount" not in dashboard_filtered_df.columns:
+                            missing_cols.append("Award Amount")
+                        st.warning(f"Missing required columns: {', '.join(missing_cols)}. Cannot display summary table.")
+                except Exception as e:
+                    st.error(f"Error creating summary table: {str(e)}")
             
             # Create sections for best grants by funder type
             st.subheader("Best Grants by Funder Type")
