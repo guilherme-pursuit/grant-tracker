@@ -166,25 +166,100 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Page title with Pursuit branding - styled like pursuit.org
+# Page title with Pursuit Wordmark and branding
 st.markdown("""
-<div style="background-color: #FFFFFF; padding: 20px 0; border-bottom: 1px solid #eaeaea; margin-bottom: 20px;">
-    <div style="display: flex; align-items: center; max-width: 1200px; margin: 0 auto;">
-        <div style="margin-right: 20px;">
-            <img src="data:image/png;base64,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" width="110">
-        </div>
-        <div>
-            <h1 style="color: #4B46E9; margin-bottom: 5px; font-size: 2.5rem; font-weight: 700;">Pursuit Grant Scanner</h1>
-            <p style="margin-top: 0; color: #333; font-size: 1.1rem;">This tool scans and displays active grant opportunities that Pursuit may be eligible for, 
-            filtered by criteria that match our mission: workforce development, tech training, 
-            economic mobility, and geographic focus.</p>
-        </div>
+<div style="background-color: #4B46E9; padding: 24px 0; margin-bottom: 30px;">
+    <div style="display: flex; justify-content: center; align-items: center; max-width: 1200px; margin: 0 auto;">
+        <img src="attached_assets/Pursuit Wordmark White on Purple.png" alt="Pursuit Wordmark" style="max-width: 300px; height: auto;">
+    </div>
+</div>
+
+<div style="display: flex; align-items: center; max-width: 1200px; margin: 0 auto 20px auto; padding: 0 20px;">
+    <div style="margin-right: 20px;">
+        <img src="attached_assets/Pursuit Logo Purple.png" alt="Pursuit Logo" width="80">
+    </div>
+    <div>
+        <h1 style="color: #4B46E9; margin-bottom: 5px; font-size: 2.5rem; font-weight: 700;">Grant Scanner</h1>
+        <p style="margin-top: 0; color: #333; font-size: 1.1rem;">This tool scans and displays active grant opportunities that Pursuit may be eligible for, 
+        filtered by criteria that match our mission: workforce development, tech training, 
+        economic mobility, and geographic focus.</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Navigation - Add tabs for different views
-tab1, tab2 = st.tabs(["Grant Listings", "Dashboard"])
+# Navigation - Add button-based navigation instead of tabs
+if 'current_view' not in st.session_state:
+    st.session_state.current_view = "Grant Listings"
+
+# Create a custom navigation bar with buttons
+st.markdown("""
+<style>
+    .nav-container {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 30px;
+        max-width: 1200px;
+        margin: 0 auto 30px auto;
+    }
+    .nav-button {
+        background-color: #f5f5f5;
+        color: #333;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px 20px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: center;
+        flex: 1;
+        transition: all 0.3s ease;
+    }
+    .nav-button:hover {
+        background-color: #e9e9e9;
+        border-color: #ccc;
+    }
+    .nav-button.active {
+        background-color: #4B46E9;
+        color: white;
+        border-color: #4B46E9;
+    }
+    @media (max-width: 768px) {
+        .nav-container {
+            flex-direction: column;
+            gap: 10px;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Create the navigation buttons
+col1, col2 = st.columns(2)
+
+with col1:
+    listings_active = "active" if st.session_state.current_view == "Grant Listings" else ""
+    if st.markdown(f"""<div class="nav-button {listings_active}" 
+                       onclick="document.querySelector('#grant-listings-btn').click()">
+                       GRANT LISTINGS
+                   </div>""", unsafe_allow_html=True):
+        pass
+    
+    # Hidden button that will be triggered by the custom HTML button
+    if st.button("Grant Listings", key="grant-listings-btn", use_container_width=True):
+        st.session_state.current_view = "Grant Listings"
+        st.rerun()
+
+with col2:
+    dashboard_active = "active" if st.session_state.current_view == "Dashboard" else ""
+    if st.markdown(f"""<div class="nav-button {dashboard_active}" 
+                       onclick="document.querySelector('#dashboard-btn').click()">
+                       DASHBOARD
+                   </div>""", unsafe_allow_html=True):
+        pass
+    
+    # Hidden button that will be triggered by the custom HTML button
+    if st.button("Dashboard", key="dashboard-btn", use_container_width=True):
+        st.session_state.current_view = "Dashboard"
+        st.rerun()
 
 # Initialize session state for storing the grants data
 if 'grants_data' not in st.session_state:
@@ -417,7 +492,9 @@ if st.session_state.grants_data is not None:
                 date_filter = deadline_filter
                 
                 # Keep rows where there's no deadline or the deadline is in range
-                filtered_df = filtered_df[~has_deadline | (has_deadline & date_filter)]
+                # Convert boolean Series to numpy array to avoid type issues
+                date_mask = ~has_deadline.values | (has_deadline.values & date_filter.values)
+                filtered_df = filtered_df[date_mask]
             
             # Sort options
             sort_options = ["Deadline (Closest)", "Deadline (Furthest)", "Award Amount (High to Low)", "Award Amount (Low to High)"]
@@ -442,14 +519,15 @@ st.sidebar.header("Advanced Search")
 search_query = st.sidebar.text_input("Search by keyword in title or description:")
 search_funder = st.sidebar.text_input("Search by funder name:")
 
-# Main content area - handled within tabs
+# Main content area - now using conditional rendering based on current_view
 if st.session_state.grants_data is None:
     # Try to load from database first
     db_grants = load_grants()
     
     # If no grants in database, show the fetch button
     if db_grants is None:
-        with tab1:  # Display in the Grant Listings tab
+        # Display in the Grant Listings view
+        if st.session_state.current_view == "Grant Listings":
             st.info("Click 'Refresh Grant Data' to fetch the latest grant opportunities.")
             col1, col2 = st.columns([1, 3])
             with col1:
@@ -474,8 +552,8 @@ else:
             search_filtered_df["Funder"].str.contains(search_funder, case=False, na=False)
         ]
     
-    # Tab 1: Grant Listings
-    with tab1:
+    # Grant Listings View
+    if st.session_state.current_view == "Grant Listings":
         st.header(f"Grant Opportunities ({len(search_filtered_df)} results)")
         
         # Export options
@@ -597,8 +675,8 @@ else:
                     
                     st.markdown("\n".join(tags_md))
     
-    # Tab 2: Dashboard
-    with tab2:
+    # Dashboard View
+    elif st.session_state.current_view == "Dashboard":
         st.header("Grant Opportunities Dashboard")
         
         # Advanced dashboard search 
