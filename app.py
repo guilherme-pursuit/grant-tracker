@@ -28,6 +28,9 @@ filtered by criteria that match our mission: workforce development, tech trainin
 economic mobility, and geographic focus.
 """)
 
+# Navigation - Add tabs for different views
+tab1, tab2 = st.tabs(["Grant Listings", "Dashboard"])
+
 # Initialize session state for storing the grants data
 if 'grants_data' not in st.session_state:
     st.session_state.grants_data = None
@@ -156,9 +159,19 @@ if st.session_state.grants_data is not None:
             funder_options = ["All"] + sorted(df["Funder Type"].unique().tolist())
             selected_funder = st.sidebar.selectbox("Funder Type", funder_options)
             
+            # Grant status filter
+            today = datetime.datetime.now().date()
+            status_options = ["All", "Open", "Closing Soon", "Closed"]
+            selected_status = st.sidebar.selectbox("Grant Status", status_options)
+            
             # Date range filter for deadlines
-            min_date = df["Deadline"].min() if not pd.isna(df["Deadline"].min()) else datetime.datetime.now()
-            max_date = df["Deadline"].max() if not pd.isna(df["Deadline"].max()) else (datetime.datetime.now() + datetime.timedelta(days=365))
+            non_null_deadlines = df["Deadline"].dropna()
+            if len(non_null_deadlines) > 0:
+                min_date = non_null_deadlines.min() if not pd.isna(non_null_deadlines.min()) else datetime.datetime.now()
+                max_date = non_null_deadlines.max() if not pd.isna(non_null_deadlines.max()) else (datetime.datetime.now() + datetime.timedelta(days=365))
+            else:
+                min_date = datetime.datetime.now()
+                max_date = datetime.datetime.now() + datetime.timedelta(days=365)
             
             date_range = st.sidebar.date_input(
                 "Deadline Range",
@@ -182,12 +195,41 @@ if st.session_state.grants_data is not None:
             if selected_funder != "All":
                 filtered_df = filtered_df[filtered_df["Funder Type"] == selected_funder]
             
+            # Apply status filter
+            if selected_status != "All":
+                today = datetime.datetime.now().date()
+                two_weeks_later = today + datetime.timedelta(days=14)
+                
+                if selected_status == "Open":
+                    # Show only grants with deadlines in the future or no deadline
+                    filtered_df = filtered_df[
+                        (filtered_df["Deadline"].isna()) | 
+                        (filtered_df["Deadline"].dt.date >= today)
+                    ]
+                elif selected_status == "Closing Soon":
+                    # Show only grants with deadlines in the next two weeks
+                    filtered_df = filtered_df[
+                        (filtered_df["Deadline"].dt.date >= today) & 
+                        (filtered_df["Deadline"].dt.date <= two_weeks_later)
+                    ]
+                elif selected_status == "Closed":
+                    # Show only grants with deadlines in the past
+                    filtered_df = filtered_df[
+                        (~filtered_df["Deadline"].isna()) & 
+                        (filtered_df["Deadline"].dt.date < today)
+                    ]
+            
             if len(date_range) == 2:
                 start_date, end_date = date_range
-                filtered_df = filtered_df[
+                # Only apply date filter to grants with deadlines
+                has_deadline = ~filtered_df["Deadline"].isna()
+                date_filter = (
                     (filtered_df["Deadline"].dt.date >= start_date) & 
                     (filtered_df["Deadline"].dt.date <= end_date)
-                ]
+                )
+                
+                # Keep rows where there's no deadline or the deadline is in range
+                filtered_df = filtered_df[~has_deadline | (has_deadline & date_filter)]
             
             # Sort options
             sort_options = ["Deadline (Closest)", "Deadline (Furthest)", "Award Amount (High to Low)", "Award Amount (Low to High)"]
@@ -207,97 +249,384 @@ if st.session_state.grants_data is not None:
             # Ensure filtered_df is an empty DataFrame in case of error
             filtered_df = pd.DataFrame()
 
-# Main content area
+# Advanced search for grants
+st.sidebar.header("Advanced Search")
+search_query = st.sidebar.text_input("Search by keyword in title or description:")
+search_funder = st.sidebar.text_input("Search by funder name:")
+
+# Main content area - handled within tabs
 if st.session_state.grants_data is None:
     # Try to load from database first
     db_grants = load_grants()
     
     # If no grants in database, show the fetch button
     if db_grants is None:
-        st.info("Click 'Refresh Grant Data' to fetch the latest grant opportunities.")
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            if st.button("Fetch Grant Data"):
-                fetch_all_grants()
-        with col2:
-            st.info("This will fetch grant data from external sources and save to database.")
+        with tab1:  # Display in the Grant Listings tab
+            st.info("Click 'Refresh Grant Data' to fetch the latest grant opportunities.")
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                if st.button("Fetch Grant Data"):
+                    fetch_all_grants()
+            with col2:
+                st.info("This will fetch grant data from external sources and save to database.")
 else:
-    # Display the filtered grants
-    st.header(f"Grant Opportunities ({len(filtered_df)} results)")
+    # Apply advanced search filters if provided
+    search_filtered_df = filtered_df.copy()
     
-    # Export options
-    col1, col2, col3 = st.columns([1, 1, 2])
+    if search_query:
+        # Filter by search query in title or description
+        search_filtered_df = search_filtered_df[
+            search_filtered_df["Title"].str.contains(search_query, case=False, na=False) |
+            search_filtered_df["Description"].str.contains(search_query, case=False, na=False)
+        ]
     
-    with col1:
-        if st.button("Export to CSV"):
-            csv_data = filtered_df.to_csv(index=False)
-            b64 = base64.b64encode(csv_data.encode()).decode()
-            href = f'<a href="data:file/csv;base64,{b64}" download="pursuit_grants.csv">Download CSV</a>'
-            st.markdown(href, unsafe_allow_html=True)
+    if search_funder:
+        # Filter by funder name
+        search_filtered_df = search_filtered_df[
+            search_filtered_df["Funder"].str.contains(search_funder, case=False, na=False)
+        ]
     
-    with col2:
-        if st.button("Share Results"):
-            share_option = st.radio("Share via:", ["Email", "Slack"])
-            recipient = st.text_input("Recipient (Email or Slack channel):")
-            
-            if st.button("Send"):
-                if share_option == "Email" and recipient:
-                    # Generate CSV
-                    csv_buffer = io.StringIO()
-                    filtered_df.to_csv(csv_buffer, index=False)
-                    csv_content = csv_buffer.getvalue()
-                    
-                    # Send email
-                    success = send_email(
-                        recipient=recipient,
-                        subject="Pursuit Grant Opportunities",
-                        body=f"Please find attached the latest grant opportunities for Pursuit.\n\nGenerated on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-                        attachment=csv_content,
-                        attachment_name="pursuit_grants.csv"
-                    )
-                    
-                    if success:
-                        st.success(f"Email sent to {recipient}!")
-                    else:
-                        st.error("Failed to send email. Please try again.")
+    # Tab 1: Grant Listings
+    with tab1:
+        st.header(f"Grant Opportunities ({len(search_filtered_df)} results)")
+        
+        # Export options
+        col1, col2, col3 = st.columns([1, 1, 2])
+        
+        with col1:
+            if st.button("Export to CSV"):
+                csv_data = search_filtered_df.to_csv(index=False)
+                b64 = base64.b64encode(csv_data.encode()).decode()
+                href = f'<a href="data:file/csv;base64,{b64}" download="pursuit_grants.csv">Download CSV</a>'
+                st.markdown(href, unsafe_allow_html=True)
+        
+        with col2:
+            if st.button("Share Results"):
+                share_option = st.radio("Share via:", ["Email", "Slack"])
+                recipient = st.text_input("Recipient (Email or Slack channel):")
                 
-                elif share_option == "Slack" and recipient:
-                    # Generate CSV
-                    csv_buffer = io.StringIO()
-                    filtered_df.to_csv(csv_buffer, index=False)
-                    csv_content = csv_buffer.getvalue()
+                if st.button("Send"):
+                    if share_option == "Email" and recipient:
+                        # Generate CSV
+                        csv_buffer = io.StringIO()
+                        search_filtered_df.to_csv(csv_buffer, index=False)
+                        csv_content = csv_buffer.getvalue()
+                        
+                        # Send email
+                        success = send_email(
+                            recipient=recipient,
+                            subject="Pursuit Grant Opportunities",
+                            body=f"Please find attached the latest grant opportunities for Pursuit.\n\nGenerated on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                            attachment=csv_content,
+                            attachment_name="pursuit_grants.csv"
+                        )
+                        
+                        if success:
+                            st.success(f"Email sent to {recipient}!")
+                        else:
+                            st.error("Failed to send email. Please try again.")
                     
-                    # Send to Slack
-                    success = send_slack(
-                        channel=recipient,
-                        message=f"Latest grant opportunities for Pursuit (Generated on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')})",
-                        file_content=csv_content,
-                        file_name="pursuit_grants.csv"
-                    )
-                    
-                    if success:
-                        st.success(f"Sent to Slack channel {recipient}!")
-                    else:
-                        st.error("Failed to send to Slack. Please try again.")
+                    elif share_option == "Slack" and recipient:
+                        # Generate CSV
+                        csv_buffer = io.StringIO()
+                        search_filtered_df.to_csv(csv_buffer, index=False)
+                        csv_content = csv_buffer.getvalue()
+                        
+                        # Send to Slack
+                        success = send_slack(
+                            channel=recipient,
+                            message=f"Latest grant opportunities for Pursuit (Generated on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')})",
+                            file_content=csv_content,
+                            file_name="pursuit_grants.csv"
+                        )
+                        
+                        if success:
+                            st.success(f"Sent to Slack channel {recipient}!")
+                        else:
+                            st.error("Failed to send to Slack. Please try again.")
+        
+        # Display grants in expandable sections
+        for i, row in search_filtered_df.iterrows():
+            deadline_str = row['Deadline'].strftime('%Y-%m-%d') if not pd.isna(row['Deadline']) else "No deadline"
+            with st.expander(f"{row['Title']} - {row['Funder']} - Deadline: {deadline_str}"):
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    st.markdown(f"**Description:** {row['Description']}")
+                    st.markdown(f"**Eligibility:** {row['Eligibility']}")
+                    st.markdown(f"**Award Amount:** ${row['Award Amount']:,.2f}" if not pd.isna(row['Award Amount']) else "**Award Amount:** Not specified")
+                
+                with col2:
+                    st.markdown("**Tags:**")
+                    st.markdown(f"- **Geography:** {row['Geography']}")
+                    st.markdown(f"- **Topic:** {row['Topic']}")
+                    st.markdown(f"- **Audience:** {row['Audience']}")
+                    st.markdown(f"- **Funder Type:** {row['Funder Type']}")
+                
+                st.markdown(f"**Application Link:** [{row['Link']}]({row['Link']})")
     
-    # Display grants in expandable sections
-    for i, row in filtered_df.iterrows():
-        with st.expander(f"{row['Title']} - {row['Funder']} - Deadline: {row['Deadline'].strftime('%Y-%m-%d')}"):
-            col1, col2 = st.columns([2, 1])
+    # Tab 2: Dashboard
+    with tab2:
+        st.header("Grant Opportunities Dashboard")
+        
+        # Advanced dashboard search 
+        st.subheader("Search Dashboard")
+        dashboard_col1, dashboard_col2, dashboard_col3 = st.columns(3)
+        
+        with dashboard_col1:
+            dashboard_search = st.text_input("Search by keyword:", key="dashboard_search")
+        with dashboard_col2:
+            funder_search = st.text_input("Search by funder name:", key="funder_search")
+        with dashboard_col3:
+            show_only_open = st.checkbox("Show only open applications", value=True)
+        
+        # Apply dashboard search filters
+        dashboard_filtered_df = search_filtered_df.copy()
+        
+        if dashboard_search:
+            dashboard_filtered_df = dashboard_filtered_df[
+                dashboard_filtered_df["Title"].str.contains(dashboard_search, case=False, na=False) |
+                dashboard_filtered_df["Description"].str.contains(dashboard_search, case=False, na=False)
+            ]
+        
+        if funder_search:
+            dashboard_filtered_df = dashboard_filtered_df[
+                dashboard_filtered_df["Funder"].str.contains(funder_search, case=False, na=False)
+            ]
+        
+        if show_only_open:
+            today = datetime.datetime.now().date()
+            dashboard_filtered_df = dashboard_filtered_df[
+                (dashboard_filtered_df["Deadline"].isna()) | 
+                (dashboard_filtered_df["Deadline"].dt.date >= today)
+            ]
+        
+        # Only show dashboard if we have data
+        if dashboard_filtered_df.empty:
+            st.info("No grants match the current filters. Adjust your filters to see the dashboard.")
+        else:
+            # Summary metrics at the top
+            col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                st.markdown(f"**Description:** {row['Description']}")
-                st.markdown(f"**Eligibility:** {row['Eligibility']}")
-                st.markdown(f"**Award Amount:** ${row['Award Amount']:,.2f}" if not pd.isna(row['Award Amount']) else "**Award Amount:** Not specified")
+                # Total grants count
+                st.metric("Total Grants", len(dashboard_filtered_df))
             
             with col2:
-                st.markdown("**Tags:**")
-                st.markdown(f"- **Geography:** {row['Geography']}")
-                st.markdown(f"- **Topic:** {row['Topic']}")
-                st.markdown(f"- **Audience:** {row['Audience']}")
-                st.markdown(f"- **Funder Type:** {row['Funder Type']}")
+                # Average award amount
+                avg_award = dashboard_filtered_df["Award Amount"].dropna().mean()
+                if pd.isna(avg_award):
+                    st.metric("Avg. Award Amount", "N/A")
+                else:
+                    st.metric("Avg. Award Amount", f"${avg_award:,.2f}")
             
-            st.markdown(f"**Application Link:** [{row['Link']}]({row['Link']})")
+            with col3:
+                # Grants closing soon (next 30 days)
+                today = datetime.datetime.now().date()
+                thirty_days = today + datetime.timedelta(days=30)
+                closing_soon = dashboard_filtered_df[
+                    (dashboard_filtered_df["Deadline"].notna()) & 
+                    (dashboard_filtered_df["Deadline"].dt.date >= today) & 
+                    (dashboard_filtered_df["Deadline"].dt.date <= thirty_days)
+                ]
+                st.metric("Closing in 30 Days", len(closing_soon))
+            
+            with col4:
+                # Open grants
+                open_grants = dashboard_filtered_df[
+                    (dashboard_filtered_df["Deadline"].isna()) | 
+                    (dashboard_filtered_df["Deadline"].dt.date >= today)
+                ]
+                st.metric("Open Grants", len(open_grants))
+            
+            # Grants by Funder Type section
+            st.subheader("Grants by Funder Type")
+            
+            # Create two columns for the funder type summary
+            funder_col1, funder_col2 = st.columns([3, 2])
+            
+            with funder_col1:
+                # Group by funder type and count grants
+                funder_type_counts = dashboard_filtered_df.groupby("Funder Type").size().reset_index(name="Count")
+                
+                # Create a bar chart of funder types
+                if not funder_type_counts.empty:
+                    st.bar_chart(funder_type_counts.set_index("Funder Type"))
+                else:
+                    st.info("No funder type data available.")
+            
+            with funder_col2:
+                # Table of grants by funder type with average award
+                funder_summary = dashboard_filtered_df.groupby("Funder Type").agg({
+                    "Award Amount": ["mean", "max", "count"]
+                }).reset_index()
+                
+                # Flatten the multi-index columns
+                funder_summary.columns = ["Funder Type", "Avg. Award", "Max Award", "Count"]
+                
+                # Format the award amounts
+                funder_summary["Avg. Award"] = funder_summary["Avg. Award"].apply(
+                    lambda x: f"${x:,.2f}" if not pd.isna(x) else "N/A"
+                )
+                funder_summary["Max Award"] = funder_summary["Max Award"].apply(
+                    lambda x: f"${x:,.2f}" if not pd.isna(x) else "N/A"
+                )
+                
+                st.dataframe(funder_summary, use_container_width=True)
+            
+            # Create sections for best grants by funder type
+            st.subheader("Best Grants by Funder Type")
+            
+            # Get unique funder types
+            funder_types = dashboard_filtered_df["Funder Type"].unique()
+            
+            # For each funder type, show the top grants by award amount
+            for funder_type in funder_types:
+                with st.expander(f"Best {funder_type} Grants"):
+                    # Filter for this funder type and sort by award amount
+                    funder_grants = dashboard_filtered_df[
+                        dashboard_filtered_df["Funder Type"] == funder_type
+                    ].sort_values("Award Amount", ascending=False).head(3)
+                    
+                    # Display top grants for this funder
+                    if not funder_grants.empty:
+                        for i, row in funder_grants.iterrows():
+                            today = datetime.datetime.now().date()
+                            status = "🟢 Open" if pd.isna(row['Deadline']) or row['Deadline'].date() >= today else "🔴 Closed"
+                            
+                            st.markdown(f"**{row['Title']}** - {status}")
+                            st.markdown(f"*Funder: {row['Funder']}*")
+                            
+                            # Display deadline if available
+                            deadline_str = row['Deadline'].strftime('%Y-%m-%d') if not pd.isna(row['Deadline']) else "No deadline"
+                            st.markdown(f"*Deadline: {deadline_str}*")
+                            
+                            # Display award amount if available
+                            award_str = f"${row['Award Amount']:,.2f}" if not pd.isna(row['Award Amount']) else "Not specified"
+                            st.markdown(f"*Award Amount: {award_str}*")
+                            
+                            # Add link to application
+                            st.markdown(f"[Apply Now]({row['Link']})")
+                            st.markdown("---")
+                    else:
+                        st.info(f"No grants data available for {funder_type}.")
+            
+            # Top grants by award amount
+            st.subheader("Top Grants by Award Amount")
+            
+            # Filter out grants with no award amount and get top 5
+            top_grants = dashboard_filtered_df.dropna(subset=["Award Amount"]).sort_values("Award Amount", ascending=False).head(5)
+            
+            if not top_grants.empty:
+                for i, row in top_grants.iterrows():
+                    st.markdown(f"**{row['Title']}** - {row['Funder']} - **${row['Award Amount']:,.2f}**")
+                    deadline_str = row['Deadline'].strftime('%Y-%m-%d') if not pd.isna(row['Deadline']) else "No deadline"
+                    st.markdown(f"*Deadline: {deadline_str}*")
+                    st.markdown(f"*[View Details]({row['Link']})*")
+                    st.markdown("---")
+            else:
+                st.info("No grants with specified award amounts available.")
+            
+            # Grants by deadline
+            st.subheader("Upcoming Grant Deadlines")
+            
+            # Filter out grants with no deadline and sort by closest deadline
+            upcoming_deadlines = dashboard_filtered_df.dropna(subset=["Deadline"]).sort_values("Deadline")
+            
+            # Only show grants with future deadlines
+            today = datetime.datetime.now().date()
+            future_deadlines = upcoming_deadlines[upcoming_deadlines["Deadline"].dt.date >= today].head(5)
+            
+            if not future_deadlines.empty:
+                for i, row in future_deadlines.iterrows():
+                    days_until = (row['Deadline'].date() - datetime.datetime.now().date()).days
+                    
+                    st.markdown(f"**{row['Title']}** - 🟢 Open")
+                    st.markdown(f"*Deadline: {row['Deadline'].strftime('%Y-%m-%d')} ({days_until} days remaining)*")
+                    award_str = f"${row['Award Amount']:,.2f}" if not pd.isna(row['Award Amount']) else "Not specified"
+                    st.markdown(f"*Award Amount: {award_str}*")
+                    st.markdown(f"*[View Details]({row['Link']})*")
+                    st.markdown("---")
+            else:
+                st.info("No grants with upcoming deadlines available.")
+            
+            # Count grants by status
+            today = datetime.datetime.now().date()
+            open_grants = len(dashboard_filtered_df[
+                (dashboard_filtered_df["Deadline"].isna()) | 
+                (dashboard_filtered_df["Deadline"].dt.date >= today)
+            ])
+            closed_grants = len(dashboard_filtered_df[
+                (~dashboard_filtered_df["Deadline"].isna()) & 
+                (dashboard_filtered_df["Deadline"].dt.date < today)
+            ])
+            no_deadline = len(dashboard_filtered_df[dashboard_filtered_df["Deadline"].isna()])
+            
+            # Create status summary data
+            status_data = pd.DataFrame({
+                "Status": ["Open", "Closed", "No Deadline"],
+                "Count": [open_grants, closed_grants, no_deadline]
+            })
+            
+            # Display status chart
+            st.bar_chart(status_data.set_index("Status"))
+            
+            # Create charts for geography and topic distributions
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Grants by geography
+                st.subheader("Grants by Geography")
+                geography_counts = dashboard_filtered_df["Geography"].value_counts().reset_index()
+                geography_counts.columns = ["Geography", "Count"]
+                
+                # Display bar chart for geography
+                st.bar_chart(geography_counts.set_index("Geography"))
+                
+            with col2:
+                # Grants by topic
+                st.subheader("Grants by Topic")
+                topic_counts = dashboard_filtered_df["Topic"].value_counts().reset_index()
+                topic_counts.columns = ["Topic", "Count"]
+                
+                # Display bar chart for topics
+                st.bar_chart(topic_counts.set_index("Topic"))
+            
+            # Top grants by award amount
+            st.subheader("Top Grants by Award Amount")
+            
+            # Filter out grants with no award amount and get top 5
+            top_grants = dashboard_filtered_df.dropna(subset=["Award Amount"]).sort_values("Award Amount", ascending=False).head(5)
+            
+            if not top_grants.empty:
+                for i, row in top_grants.iterrows():
+                    st.markdown(f"**{row['Title']}** - {row['Funder']} - **${row['Award Amount']:,.2f}**")
+                    deadline_str = row['Deadline'].strftime('%Y-%m-%d') if not pd.isna(row['Deadline']) else "No deadline"
+                    st.markdown(f"*Deadline: {deadline_str}*")
+                    st.markdown(f"*[View Details]({row['Link']})*")
+                    st.markdown("---")
+            else:
+                st.info("No grants with specified award amounts available.")
+            
+            # Grants by deadline
+            st.subheader("Upcoming Grant Deadlines")
+            
+            # Filter out grants with no deadline and sort by closest deadline
+            upcoming_deadlines = dashboard_filtered_df.dropna(subset=["Deadline"]).sort_values("Deadline").head(5)
+            
+            if not upcoming_deadlines.empty:
+                for i, row in upcoming_deadlines.iterrows():
+                    days_until = (row['Deadline'].date() - datetime.datetime.now().date()).days
+                    status = "🟢 Open" if days_until >= 0 else "🔴 Closed"
+                    
+                    st.markdown(f"**{row['Title']}** - {status}")
+                    st.markdown(f"*Deadline: {row['Deadline'].strftime('%Y-%m-%d')} ({days_until} days remaining)*")
+                    award_str = f"${row['Award Amount']:,.2f}" if not pd.isna(row['Award Amount']) else "Not specified"
+                    st.markdown(f"*Award Amount: {award_str}*")
+                    st.markdown(f"*[View Details]({row['Link']})*")
+                    st.markdown("---")
+            else:
+                st.info("No grants with specified deadlines available.")
 
 # Footer
 st.markdown("---")

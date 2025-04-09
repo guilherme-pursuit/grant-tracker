@@ -154,12 +154,14 @@ def fetch_ny_grants_gateway_opportunities():
                     if link and not link.startswith("http"):
                         if link.startswith("/"):
                             # Extract domain from used_url 
-                            domain_match = re.match(r"https?://[^/]+", used_url)
+                            base_url = used_url if used_url else "https://grantsmanagement.ny.gov"
+                            domain_match = re.match(r"https?://[^/]+", base_url)
                             domain = domain_match.group(0) if domain_match else "https://grantsmanagement.ny.gov"
                             link = f"{domain}{link}"
                         else:
                             # Assume it's relative to the current URL
-                            link = f"{used_url.rstrip('/')}/{link.lstrip('/')}"
+                            base_url = used_url if used_url else "https://grantsmanagement.ny.gov"
+                            link = f"{base_url.rstrip('/')}/{link.lstrip('/')}"
                 
                 # Extract other information
                 info_elements = grant_element.find_all("div", class_="views-field") or grant_element.find_all("div", class_="field")
