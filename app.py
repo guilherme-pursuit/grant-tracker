@@ -21,13 +21,94 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Page title and description
-st.title("Pursuit Grant Scanner")
+# Custom CSS for Pursuit branding and mobile responsiveness
 st.markdown("""
-This tool scans and displays active grant opportunities that Pursuit may be eligible for, 
-filtered by criteria that match our mission: workforce development, tech training, 
-economic mobility, and geographic focus.
-""")
+<style>
+    /* Pursuit purple color for buttons and accents */
+    .stButton>button {
+        background-color: #4B46E9;
+        color: white;
+        border-radius: 4px;
+        padding: 0.5rem 1rem;
+        border: none;
+    }
+    .stButton>button:hover {
+        background-color: #3f3ac1;
+    }
+    
+    /* Container formatting */
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    
+    /* Heading colors */
+    h1, h2, h3 {
+        color: #4B46E9;
+    }
+    
+    /* Responsive styling for mobile */
+    @media (max-width: 768px) {
+        .row-widget.stButton {
+            width: 100%;
+        }
+        
+        /* Make columns stack on mobile */
+        div[data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            margin-bottom: 1rem;
+        }
+        
+        /* Make the grant cards more readable on mobile */
+        .stExpander {
+            padding: 0.5rem 0;
+        }
+        
+        /* Add spacing between elements */
+        .css-ocqkz7, .css-1lcbmhc {
+            margin-bottom: 1rem;
+        }
+    }
+    
+    /* Grant cards styling */
+    div[data-testid="stExpander"] {
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 0.75rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    
+    /* Status indicators */
+    .status-open {
+        color: #00C853;
+        font-weight: bold;
+    }
+    .status-closed {
+        color: #F44336;
+        font-weight: bold;
+    }
+    .status-closing-soon {
+        color: #FF9800;
+        font-weight: bold;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Page title with Pursuit logo
+col1, col2 = st.columns([1, 5])
+
+with col1:
+    # Display Pursuit logo with custom size
+    st.image("attached_assets/Pursuit Logo Purple.png", width=120)
+
+with col2:
+    st.title("Pursuit Grant Scanner")
+    st.markdown("""
+    This tool scans and displays active grant opportunities that Pursuit may be eligible for, 
+    filtered by criteria that match our mission: workforce development, tech training, 
+    economic mobility, and geographic focus.
+    """)
 
 # Navigation - Add tabs for different views
 tab1, tab2 = st.tabs(["Grant Listings", "Dashboard"])
@@ -382,22 +463,66 @@ else:
         # Display grants in expandable sections
         for i, row in search_filtered_df.iterrows():
             deadline_str = row['Deadline'].strftime('%Y-%m-%d') if not pd.isna(row['Deadline']) else "No deadline"
-            with st.expander(f"{row['Title']} - {row['Funder']} - Deadline: {deadline_str}"):
+            
+            # Determine grant status for styling
+            status_class = ""
+            status_text = ""
+            
+            if not pd.isna(row['Deadline']):
+                today = datetime.datetime.now().date()
+                deadline_date = row['Deadline'].date()
+                two_weeks_later = today + datetime.timedelta(days=14)
+                
+                if deadline_date < today:
+                    status_class = "status-closed"
+                    status_text = "CLOSED"
+                elif deadline_date <= two_weeks_later:
+                    status_class = "status-closing-soon"
+                    status_text = "CLOSING SOON"
+                else:
+                    status_class = "status-open"
+                    status_text = "OPEN"
+            else:
+                status_class = "status-open"
+                status_text = "OPEN"
+            
+            # Create expander title with status indicator
+            expander_title = f"{row['Title']} - {row['Funder']}"
+            
+            with st.expander(expander_title):
+                # Status and deadline info at the top
+                st.markdown(f"<div><span class='{status_class}'>{status_text}</span> - Deadline: {deadline_str}</div>", unsafe_allow_html=True)
+                
+                # Responsive columns for desktop and stacked for mobile
                 col1, col2 = st.columns([2, 1])
                 
                 with col1:
-                    st.markdown(f"**Description:** {row['Description']}")
-                    st.markdown(f"**Eligibility:** {row['Eligibility']}")
-                    st.markdown(f"**Award Amount:** ${row['Award Amount']:,.2f}" if not pd.isna(row['Award Amount']) else "**Award Amount:** Not specified")
+                    st.markdown("### Grant Details")
+                    if not pd.isna(row['Description']):
+                        st.markdown(f"**Description:** {row['Description']}")
+                    if not pd.isna(row['Eligibility']):
+                        st.markdown(f"**Eligibility:** {row['Eligibility']}")
+                    
+                    award_text = f"**Award Amount:** ${row['Award Amount']:,.2f}" if not pd.isna(row['Award Amount']) else "**Award Amount:** Not specified"
+                    st.markdown(award_text)
+                    
+                    # Add link button if available
+                    if not pd.isna(row['Link']) and row['Link'] != '':
+                        st.markdown(f"[Apply Now ↗]({row['Link']})")
                 
                 with col2:
-                    st.markdown("**Tags:**")
-                    st.markdown(f"- **Geography:** {row['Geography']}")
-                    st.markdown(f"- **Topic:** {row['Topic']}")
-                    st.markdown(f"- **Audience:** {row['Audience']}")
-                    st.markdown(f"- **Funder Type:** {row['Funder Type']}")
-                
-                st.markdown(f"**Application Link:** [{row['Link']}]({row['Link']})")
+                    st.markdown("### Tags")
+                    tags_md = []
+                    if not pd.isna(row['Geography']):
+                        tags_md.append(f"- **Geography:** {row['Geography']}")
+                    if not pd.isna(row['Topic']):
+                        tags_md.append(f"- **Topic:** {row['Topic']}")
+                    if not pd.isna(row['Audience']):
+                        tags_md.append(f"- **Audience:** {row['Audience']}")
+                    if not pd.isna(row['Funder Type']):
+                        tags_md.append(f"- **Funder Type:** {row['Funder Type']}")
+                    
+                    st.markdown("\n".join(tags_md))
     
     # Tab 2: Dashboard
     with tab2:
@@ -683,4 +808,13 @@ else:
 
 # Footer
 st.markdown("---")
-st.markdown("© 2023 Pursuit Grant Scanner - Made with Streamlit")
+footer_col1, footer_col2 = st.columns([1, 5])
+
+with footer_col1:
+    st.image("attached_assets/Pursuit Logo Purple.png", width=60)
+    
+with footer_col2:
+    st.markdown("""
+    <div style="color: #4B46E9; font-weight: bold;">Pursuit Grant Scanner</div>
+    <div style="font-size: 0.8em;">© 2025 Pursuit - Made with 💜 to help find grant opportunities</div>
+    """, unsafe_allow_html=True)
