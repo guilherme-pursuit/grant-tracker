@@ -21,13 +21,18 @@ def fetch_ny_grants_gateway_opportunities():
     
     try:
         # Fetch the main opportunities page
-        response = requests.get(NY_GRANTS_GATEWAY_URL, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        })
-        
-        if response.status_code != 200:
-            logging.error(f"Failed to fetch NY Grants Gateway page: {response.status_code}")
-            return pd.DataFrame()
+        try:
+            response = requests.get(NY_GRANTS_GATEWAY_URL, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            }, timeout=15)  # Add timeout to avoid hanging
+            
+            if response.status_code != 200:
+                logging.error(f"Failed to fetch NY Grants Gateway page: {response.status_code}")
+                return create_empty_grants_df()
+                
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Request error when fetching NY Grants Gateway: {str(e)}")
+            return create_empty_grants_df()
         
         # Parse the HTML
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -36,53 +41,63 @@ def fetch_ny_grants_gateway_opportunities():
         opportunities = []
         
         # The structure of the page might vary, so we're looking for key elements
-        # This is a simplified approach - actual implementation may need to be more robust
         grant_elements = soup.find_all("div", class_="views-row")
+        
+        if not grant_elements:
+            logging.warning("No grant elements found on the NY Grants Gateway page. Structure may have changed.")
+            # Try alternative selectors if the page structure might have changed
+            grant_elements = soup.find_all("div", class_="opportunity-item")
+            
+            if not grant_elements:
+                # Second fallback attempt
+                grant_elements = soup.find_all("tr", class_="opportunity-row")
         
         for grant_element in grant_elements:
             try:
                 # Extract title and link
-                title_element = grant_element.find("span", class_="field-content")
+                title_element = grant_element.find("span", class_="field-content") or grant_element.find("h3") or grant_element.find("a")
                 if not title_element:
                     continue
                 
                 title = title_element.get_text(strip=True)
-                link_element = title_element.find("a")
-                link = link_element["href"] if link_element else ""
+                link_element = title_element.find("a") if not title_element.name == "a" else title_element
+                link = link_element["href"] if link_element and "href" in link_element.attrs else ""
                 
                 if link and not link.startswith("http"):
                     link = f"https://grantsmanagement.ny.gov{link}"
                 
                 # Extract other information
-                info_elements = grant_element.find_all("div", class_="views-field")
+                info_elements = grant_element.find_all("div", class_="views-field") or grant_element.find_all("div", class_="field")
                 
                 grant_info = {
                     "Title": title,
                     "Link": link,
                     "Funder": "New York State",
-                    "Source": "NY Grants Gateway"
+                    "Source": "NY Grants Gateway",
+                    "Description": "No description available.",
+                    "Eligibility": "Contact New York State Grants Gateway for eligibility information."
                 }
                 
                 for info in info_elements:
-                    label = info.find("div", class_="views-label")
+                    label = info.find("div", class_="views-label") or info.find("label") or info.find("strong")
                     if not label:
                         continue
                     
                     label_text = label.get_text(strip=True).replace(":", "")
-                    value_element = info.find("div", class_="field-content")
-                    value = value_element.get_text(strip=True) if value_element else ""
+                    value_element = info.find("div", class_="field-content") or info.find("span") or info
+                    value = value_element.get_text(strip=True).replace(label_text, "") if value_element else ""
                     
-                    if "Funding" in label_text or "Award" in label_text:
+                    if "Funding" in label_text or "Award" in label_text or "Amount" in label_text:
                         grant_info["Award Amount"] = parse_amount(value)
-                    elif "Deadline" in label_text or "Due Date" in label_text:
+                    elif "Deadline" in label_text or "Due Date" in label_text or "Close" in label_text:
                         grant_info["Deadline"] = parse_date(value)
-                    elif "Description" in label_text:
+                    elif "Description" in label_text or "Summary" in label_text or "Overview" in label_text:
                         grant_info["Description"] = value
                     elif "Eligible" in label_text or "Eligibility" in label_text:
                         grant_info["Eligibility"] = value
-                    elif "Issued" in label_text or "Posted" in label_text:
+                    elif "Issued" in label_text or "Posted" in label_text or "Start" in label_text or "Open" in label_text:
                         grant_info["Start Date"] = parse_date(value)
-                    elif "Agency" in label_text or "Department" in label_text:
+                    elif "Agency" in label_text or "Department" in label_text or "Issuer" in label_text:
                         grant_info["Funder"] = value
                 
                 opportunities.append(grant_info)
@@ -91,6 +106,10 @@ def fetch_ny_grants_gateway_opportunities():
                 logging.warning(f"Error parsing grant element: {str(e)}")
         
         # Convert to DataFrame
+        if not opportunities:
+            logging.warning("No grant opportunities found on NY Grants Gateway")
+            return create_empty_grants_df()
+            
         df = pd.DataFrame(opportunities)
         
         # Ensure required columns exist
@@ -104,7 +123,16 @@ def fetch_ny_grants_gateway_opportunities():
         
     except Exception as e:
         logging.error(f"Error in fetch_ny_grants_gateway_opportunities: {str(e)}")
-        return pd.DataFrame()  # Return empty DataFrame on error
+        return create_empty_grants_df()
+
+
+def create_empty_grants_df():
+    """Create an empty DataFrame with the proper grant structure."""
+    df = pd.DataFrame(columns=[
+        "Title", "Funder", "Description", "Deadline", "Award Amount", 
+        "Eligibility", "Link", "Source", "Grant ID", "Start Date"
+    ])
+    return df
 
 
 def parse_date(date_str):

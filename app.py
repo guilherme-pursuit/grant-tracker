@@ -8,6 +8,7 @@ from ny_grants_gateway_scraper import fetch_ny_grants_gateway_opportunities
 from grant_processor import process_grants, tag_grants
 from utils import send_email, send_slack
 from funder_data import FUNDER_CATEGORIES
+from sample_grants_data import fetch_sample_grants
 
 # Set page configuration
 st.set_page_config(
@@ -42,6 +43,11 @@ def fetch_all_grants():
         # Combine all grants
         all_grants = pd.concat([govt_grants, ny_grants], ignore_index=True)
         
+        # If we couldn't get data from the APIs, use sample data for demonstration
+        if all_grants.empty:
+            st.warning("Could not fetch live data from grant sources. Using sample data for demonstration purposes.")
+            all_grants = fetch_sample_grants()
+        
         # Process and tag the grants
         processed_grants = process_grants(all_grants)
         tagged_grants = tag_grants(processed_grants)
@@ -67,71 +73,84 @@ if st.session_state.last_refresh:
 # Filter options in sidebar
 st.sidebar.header("Filter Options")
 
+# Initialize filtered_df to ensure it's defined regardless of condition outcomes
+filtered_df = pd.DataFrame()
+
 # Only show filters if we have data
 if st.session_state.grants_data is not None:
     df = st.session_state.grants_data
     
-    # Geography filter
-    geography_options = ["All"] + sorted(df["Geography"].unique().tolist())
-    selected_geography = st.sidebar.selectbox("Geography", geography_options)
-    
-    # Topic filter
-    topic_options = ["All"] + sorted(df["Topic"].unique().tolist())
-    selected_topic = st.sidebar.selectbox("Topic", topic_options)
-    
-    # Audience filter
-    audience_options = ["All"] + sorted(df["Audience"].unique().tolist())
-    selected_audience = st.sidebar.selectbox("Audience", audience_options)
-    
-    # Funder type filter
-    funder_options = ["All"] + sorted(df["Funder Type"].unique().tolist())
-    selected_funder = st.sidebar.selectbox("Funder Type", funder_options)
-    
-    # Date range filter for deadlines
-    min_date = df["Deadline"].min() if not pd.isna(df["Deadline"].min()) else datetime.datetime.now()
-    max_date = df["Deadline"].max() if not pd.isna(df["Deadline"].max()) else (datetime.datetime.now() + datetime.timedelta(days=365))
-    
-    date_range = st.sidebar.date_input(
-        "Deadline Range",
-        value=(min_date.date(), max_date.date()),
-        min_value=min_date.date(),
-        max_value=max_date.date()
-    )
-    
-    # Apply filters
-    filtered_df = df.copy()
-    
-    if selected_geography != "All":
-        filtered_df = filtered_df[filtered_df["Geography"] == selected_geography]
-    
-    if selected_topic != "All":
-        filtered_df = filtered_df[filtered_df["Topic"] == selected_topic]
-    
-    if selected_audience != "All":
-        filtered_df = filtered_df[filtered_df["Audience"] == selected_audience]
-    
-    if selected_funder != "All":
-        filtered_df = filtered_df[filtered_df["Funder Type"] == selected_funder]
-    
-    if len(date_range) == 2:
-        start_date, end_date = date_range
-        filtered_df = filtered_df[
-            (filtered_df["Deadline"].dt.date >= start_date) & 
-            (filtered_df["Deadline"].dt.date <= end_date)
-        ]
-    
-    # Sort options
-    sort_options = ["Deadline (Closest)", "Deadline (Furthest)", "Award Amount (High to Low)", "Award Amount (Low to High)"]
-    sort_by = st.sidebar.selectbox("Sort By", sort_options)
-    
-    if sort_by == "Deadline (Closest)":
-        filtered_df = filtered_df.sort_values("Deadline")
-    elif sort_by == "Deadline (Furthest)":
-        filtered_df = filtered_df.sort_values("Deadline", ascending=False)
-    elif sort_by == "Award Amount (High to Low)":
-        filtered_df = filtered_df.sort_values("Award Amount", ascending=False)
-    elif sort_by == "Award Amount (Low to High)":
-        filtered_df = filtered_df.sort_values("Award Amount")
+    # Check if DataFrame is empty or missing columns
+    if df.empty:
+        st.sidebar.warning("No grant data available. Please try refreshing the data.")
+    else:
+        try:
+            # Geography filter
+            geography_options = ["All"] + sorted(df["Geography"].unique().tolist())
+            selected_geography = st.sidebar.selectbox("Geography", geography_options)
+            
+            # Topic filter
+            topic_options = ["All"] + sorted(df["Topic"].unique().tolist())
+            selected_topic = st.sidebar.selectbox("Topic", topic_options)
+            
+            # Audience filter
+            audience_options = ["All"] + sorted(df["Audience"].unique().tolist())
+            selected_audience = st.sidebar.selectbox("Audience", audience_options)
+            
+            # Funder type filter
+            funder_options = ["All"] + sorted(df["Funder Type"].unique().tolist())
+            selected_funder = st.sidebar.selectbox("Funder Type", funder_options)
+            
+            # Date range filter for deadlines
+            min_date = df["Deadline"].min() if not pd.isna(df["Deadline"].min()) else datetime.datetime.now()
+            max_date = df["Deadline"].max() if not pd.isna(df["Deadline"].max()) else (datetime.datetime.now() + datetime.timedelta(days=365))
+            
+            date_range = st.sidebar.date_input(
+                "Deadline Range",
+                value=(min_date.date(), max_date.date()),
+                min_value=min_date.date(),
+                max_value=max_date.date()
+            )
+            
+            # Apply filters
+            filtered_df = df.copy()
+            
+            if selected_geography != "All":
+                filtered_df = filtered_df[filtered_df["Geography"] == selected_geography]
+            
+            if selected_topic != "All":
+                filtered_df = filtered_df[filtered_df["Topic"] == selected_topic]
+            
+            if selected_audience != "All":
+                filtered_df = filtered_df[filtered_df["Audience"] == selected_audience]
+            
+            if selected_funder != "All":
+                filtered_df = filtered_df[filtered_df["Funder Type"] == selected_funder]
+            
+            if len(date_range) == 2:
+                start_date, end_date = date_range
+                filtered_df = filtered_df[
+                    (filtered_df["Deadline"].dt.date >= start_date) & 
+                    (filtered_df["Deadline"].dt.date <= end_date)
+                ]
+            
+            # Sort options
+            sort_options = ["Deadline (Closest)", "Deadline (Furthest)", "Award Amount (High to Low)", "Award Amount (Low to High)"]
+            sort_by = st.sidebar.selectbox("Sort By", sort_options)
+            
+            if sort_by == "Deadline (Closest)":
+                filtered_df = filtered_df.sort_values("Deadline")
+            elif sort_by == "Deadline (Furthest)":
+                filtered_df = filtered_df.sort_values("Deadline", ascending=False)
+            elif sort_by == "Award Amount (High to Low)":
+                filtered_df = filtered_df.sort_values("Award Amount", ascending=False)
+            elif sort_by == "Award Amount (Low to High)":
+                filtered_df = filtered_df.sort_values("Award Amount")
+        except KeyError as e:
+            st.sidebar.error(f"Error: Missing required column - {str(e)}")
+            st.sidebar.info("The data may not have been properly loaded. Please try refreshing.")
+            # Ensure filtered_df is an empty DataFrame in case of error
+            filtered_df = pd.DataFrame()
 
 # Main content area
 if st.session_state.grants_data is None:

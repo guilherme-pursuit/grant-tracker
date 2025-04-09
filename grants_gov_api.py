@@ -9,7 +9,8 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Grants.gov API base URL
-GRANTS_GOV_API_BASE = "https://www.grants.gov/grantsws/rest/opportunities/search2/"
+# Note: This API URL might need to be updated as Grants.gov changes their API structure
+GRANTS_GOV_API_BASE = "https://www.grants.gov/grantsws/rest/opportunities/search/"
 
 # Keywords relevant to Pursuit's mission
 PURSUIT_KEYWORDS = [
