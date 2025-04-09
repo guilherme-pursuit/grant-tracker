@@ -1,7 +1,7 @@
 import os
 import logging
 import pandas as pd
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Table, MetaData
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Table, MetaData, func, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import datetime
@@ -231,6 +231,62 @@ def init_db():
 
 
 # Check database connection
+def clean_low_quality_grants():
+    """
+    Remove low-quality grants from the database.
+    This includes removing entries with generic titles like "Click here" or "Page Help".
+    """
+    if engine is None:
+        logging.error("Cannot clean database: engine not initialized")
+        return False
+    
+    try:
+        # Create session
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        # Find low-quality grants based on title
+        low_quality_keywords = [
+            "click here", "page help", "tutorial", "help", "nysggportal", 
+            "goportal", "login", "register", "pdf", "manual", "grantopportunities", 
+            "mygrants", "learn more", "home", "back", "next"
+        ]
+        
+        # Build query to find grants with problematic titles
+        conditions = []
+        for keyword in low_quality_keywords:
+            conditions.append(Grant.title.ilike(f"%{keyword}%"))
+        
+        # Find grants with very short descriptions
+        conditions.append(func.length(Grant.description) < 30)
+        
+        # Find grants with PDF links or tutorial links
+        conditions.append(Grant.link.ilike("%pdf%"))
+        conditions.append(Grant.link.ilike("%tutorial%"))
+        conditions.append(Grant.link.ilike("%help%"))
+        
+        # Remove matching grants
+        low_quality_grants = session.query(Grant).filter(or_(*conditions)).all()
+        
+        if low_quality_grants:
+            count = len(low_quality_grants)
+            for grant in low_quality_grants:
+                session.delete(grant)
+            
+            session.commit()
+            logging.info(f"Removed {count} low-quality grants from database")
+            
+        session.close()
+        return True
+        
+    except Exception as e:
+        logging.error(f"Error cleaning database: {str(e)}")
+        if 'session' in locals():
+            session.rollback()
+            session.close()
+        return False
+
+
 def check_db_connection():
     """Check if database connection is working."""
     if engine is None:

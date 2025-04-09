@@ -13,6 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # URLs for foundation grant sources
 FOUNDATION_GRANT_URLS = [
+    "https://www.publicbenefitinnovationfund.org/",
     "https://candid.org/find-funding",
     "https://www.grantwatch.com/cat/41/workforce-grants.html",
     "https://philanthropynewyork.org/rfps-member-updates",
@@ -133,11 +134,20 @@ def extract_grants_from_page(soup, base_url, foundation_name):
     grant_container_selectors = [
         "div.grant-opportunity", "div.funding-opportunity", "div.grant", 
         "div.card", "div.opportunity", "div.program", "article", 
-        "div.grant-listing", "li.grant-item", "div.rfp-item"
+        "div.grant-listing", "li.grant-item", "div.rfp-item",
+        "div.wp-block-columns", "div.wp-block-column"
     ]
     
-    # Try each selector to find grant containers
+    # Initialize containers list
     containers = []
+    
+    # Special case for Public Benefit Innovation Fund
+    if "publicbenefitinnovationfund" in base_url:
+        # Try to find their grant information which is in WordPress blocks
+        program_blocks = soup.find_all("div", class_="wp-block-columns")
+        if program_blocks:
+            containers.extend(program_blocks)
+            logging.info(f"Found {len(program_blocks)} potential grant blocks from Public Benefit Innovation Fund")
     for selector in grant_container_selectors:
         try:
             element_type, element_class = selector.split('.')

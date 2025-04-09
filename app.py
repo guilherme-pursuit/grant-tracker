@@ -11,7 +11,7 @@ from grant_processor import process_grants, tag_grants
 from utils import send_email, send_slack
 from funder_data import FUNDER_CATEGORIES
 from sample_grants_data import fetch_sample_grants
-from database import save_grants_to_db, load_grants_from_db, check_db_connection
+from database import save_grants_to_db, load_grants_from_db, check_db_connection, clean_low_quality_grants
 
 # Set page configuration
 st.set_page_config(
@@ -47,6 +47,11 @@ def load_grants():
             st.error("Database connection failed. Unable to load saved grants.")
             return None
         
+        # Clean database of low-quality grants first
+        cleaned = clean_low_quality_grants()
+        if cleaned:
+            st.success("Cleaned database of low-quality grants")
+        
         # Load grants from database
         grants_df = load_grants_from_db()
         
@@ -64,6 +69,12 @@ def load_grants():
 # Function to fetch all grant opportunities
 def fetch_all_grants():
     with st.spinner("Fetching grant opportunities..."):
+        # Clean database of low-quality grants first
+        if check_db_connection():
+            cleaned = clean_low_quality_grants()
+            if cleaned:
+                st.success("Cleaned database of low-quality grants")
+                
         # Fetch grants from all sources - prioritize foundation and corporate
         foundation_grants = fetch_foundation_grants()
         ny_grants = fetch_ny_grants_gateway_opportunities()
@@ -207,25 +218,32 @@ if st.session_state.grants_data is not None:
                 if selected_status == "Open":
                     # Show only grants with deadlines in the future or no deadline
                     today_pd = pd.to_datetime(today)
-                    filtered_df = filtered_df[
-                        (filtered_df["Deadline"].isna()) | 
-                        (filtered_df["Deadline"] >= today_pd)
-                    ]
+                    
+                    # Convert dates safely for comparison
+                    open_filter = filtered_df["Deadline"].apply(lambda x: 
+                        pd.Timestamp(x.date()) >= today_pd if not pd.isna(x) else True)
+                    
+                    filtered_df = filtered_df[open_filter]
                 elif selected_status == "Closing Soon":
                     # Show only grants with deadlines in the next two weeks
                     today_pd = pd.to_datetime(today)
                     two_weeks_later_pd = pd.to_datetime(two_weeks_later)
-                    filtered_df = filtered_df[
-                        (filtered_df["Deadline"] >= today_pd) & 
-                        (filtered_df["Deadline"] <= two_weeks_later_pd)
-                    ]
+                    
+                    # Convert dates safely for comparison
+                    closing_soon_filter = filtered_df["Deadline"].apply(lambda x: 
+                        pd.Timestamp(x.date()) >= today_pd and pd.Timestamp(x.date()) <= two_weeks_later_pd
+                        if not pd.isna(x) else False)
+                    
+                    filtered_df = filtered_df[closing_soon_filter]
                 elif selected_status == "Closed":
                     # Show only grants with deadlines in the past
                     today_pd = pd.to_datetime(today)
-                    filtered_df = filtered_df[
-                        (~filtered_df["Deadline"].isna()) & 
-                        (filtered_df["Deadline"] < today_pd)
-                    ]
+                    
+                    # Convert dates safely for comparison
+                    closed_filter = filtered_df["Deadline"].apply(lambda x: 
+                        pd.Timestamp(x.date()) < today_pd if not pd.isna(x) else False)
+                    
+                    filtered_df = filtered_df[closed_filter]
             
             if len(date_range) == 2:
                 start_date, end_date = date_range
@@ -236,10 +254,13 @@ if st.session_state.grants_data is not None:
                 start_date_pd = pd.to_datetime(start_date)
                 end_date_pd = pd.to_datetime(end_date)
                 
-                date_filter = (
-                    (filtered_df["Deadline"] >= start_date_pd) & 
-                    (filtered_df["Deadline"] <= end_date_pd)
-                )
+                # Convert Deadline column to date format for comparison
+                # This handles the datetime64[ns] vs date comparison issue
+                deadline_filter = filtered_df["Deadline"].apply(lambda x: 
+                    pd.Timestamp(x.date()) >= start_date_pd and pd.Timestamp(x.date()) <= end_date_pd 
+                    if not pd.isna(x) else False)
+                
+                date_filter = deadline_filter
                 
                 # Keep rows where there's no deadline or the deadline is in range
                 filtered_df = filtered_df[~has_deadline | (has_deadline & date_filter)]
@@ -410,10 +431,12 @@ else:
         if show_only_open:
             today = datetime.datetime.now().date()
             today_pd = pd.to_datetime(today)
-            dashboard_filtered_df = dashboard_filtered_df[
-                (dashboard_filtered_df["Deadline"].isna()) | 
-                (dashboard_filtered_df["Deadline"] >= today_pd)
-            ]
+            
+            # Convert dates safely for comparison
+            open_filter = dashboard_filtered_df["Deadline"].apply(lambda x: 
+                pd.Timestamp(x.date()) >= today_pd if not pd.isna(x) else True)
+            
+            dashboard_filtered_df = dashboard_filtered_df[open_filter]
         
         # Only show dashboard if we have data
         if dashboard_filtered_df.empty:
@@ -440,20 +463,24 @@ else:
                 thirty_days = today + datetime.timedelta(days=30)
                 today_pd = pd.to_datetime(today)
                 thirty_days_pd = pd.to_datetime(thirty_days)
-                closing_soon = dashboard_filtered_df[
-                    (dashboard_filtered_df["Deadline"].notna()) & 
-                    (dashboard_filtered_df["Deadline"] >= today_pd) & 
-                    (dashboard_filtered_df["Deadline"] <= thirty_days_pd)
-                ]
+                
+                # Convert dates safely for comparison
+                closing_soon_filter = dashboard_filtered_df["Deadline"].apply(lambda x: 
+                    pd.Timestamp(x.date()) >= today_pd and pd.Timestamp(x.date()) <= thirty_days_pd
+                    if not pd.isna(x) else False)
+                
+                closing_soon = dashboard_filtered_df[closing_soon_filter]
                 st.metric("Closing in 30 Days", len(closing_soon))
             
             with col4:
                 # Open grants
                 today_pd = pd.to_datetime(today)
-                open_grants = dashboard_filtered_df[
-                    (dashboard_filtered_df["Deadline"].isna()) | 
-                    (dashboard_filtered_df["Deadline"] >= today_pd)
-                ]
+                
+                # Convert dates safely for comparison
+                open_filter = dashboard_filtered_df["Deadline"].apply(lambda x: 
+                    pd.Timestamp(x.date()) >= today_pd if not pd.isna(x) else True)
+                    
+                open_grants = dashboard_filtered_df[open_filter]
                 st.metric("Open Grants", len(open_grants))
             
             # Grants by Funder Type section
@@ -553,7 +580,12 @@ else:
             # Only show grants with future deadlines
             today = datetime.datetime.now().date()
             today_pd = pd.to_datetime(today)
-            future_deadlines = upcoming_deadlines[upcoming_deadlines["Deadline"] >= today_pd].head(5)
+            
+            # Convert dates safely for comparison
+            future_filter = upcoming_deadlines["Deadline"].apply(lambda x: 
+                pd.Timestamp(x.date()) >= today_pd if not pd.isna(x) else False)
+                
+            future_deadlines = upcoming_deadlines[future_filter].head(5)
             
             if not future_deadlines.empty:
                 for i, row in future_deadlines.iterrows():
@@ -571,14 +603,16 @@ else:
             # Count grants by status
             today = datetime.datetime.now().date()
             today_pd = pd.to_datetime(today)
-            open_grants = len(dashboard_filtered_df[
-                (dashboard_filtered_df["Deadline"].isna()) | 
-                (dashboard_filtered_df["Deadline"] >= today_pd)
-            ])
-            closed_grants = len(dashboard_filtered_df[
-                (~dashboard_filtered_df["Deadline"].isna()) & 
-                (dashboard_filtered_df["Deadline"] < today_pd)
-            ])
+            
+            # Convert dates safely for comparison for open grants
+            open_filter = dashboard_filtered_df["Deadline"].apply(lambda x: 
+                pd.Timestamp(x.date()) >= today_pd if not pd.isna(x) else True)
+            open_grants = len(dashboard_filtered_df[open_filter])
+            
+            # Convert dates safely for comparison for closed grants
+            closed_filter = dashboard_filtered_df["Deadline"].apply(lambda x: 
+                pd.Timestamp(x.date()) < today_pd if not pd.isna(x) else False)
+            closed_grants = len(dashboard_filtered_df[closed_filter])
             no_deadline = len(dashboard_filtered_df[dashboard_filtered_df["Deadline"].isna()])
             
             # Create status summary data
