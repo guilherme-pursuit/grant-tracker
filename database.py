@@ -134,7 +134,11 @@ def save_grants_to_db(grants_df):
             grant_dict = {}
             for df_col, db_col in column_mapping.items():
                 if df_col in row:
-                    grant_dict[db_col] = row[df_col]
+                    # Handle NaT (Not a Time) values for dates
+                    if pd.isna(row[df_col]) or (isinstance(row[df_col], pd.Timestamp) and pd.isnull(row[df_col])):
+                        grant_dict[db_col] = None
+                    else:
+                        grant_dict[db_col] = row[df_col]
             grants_data.append(grant_dict)
         
         # Insert new grants

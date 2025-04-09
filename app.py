@@ -64,32 +64,53 @@ def fetch_all_grants():
         govt_grants = fetch_grants_gov_opportunities()
         ny_grants = fetch_ny_grants_gateway_opportunities()
         
-        # Combine all grants
+        # Track data sources
+        sources = []
+        if not govt_grants.empty:
+            sources.append("Grants.gov")
+        if not ny_grants.empty:
+            sources.append("NY Grants Gateway")
+            
+        # Combine all grants from actual sources
         all_grants = pd.concat([govt_grants, ny_grants], ignore_index=True)
         
-        # If we couldn't get data from the APIs, use sample data for demonstration
-        if all_grants.empty:
-            st.warning("Could not fetch live data from grant sources. Using sample data for demonstration purposes.")
-            all_grants = fetch_sample_grants()
-        
-        # Process and tag the grants
-        processed_grants = process_grants(all_grants)
-        tagged_grants = tag_grants(processed_grants)
-        
-        # Save to database
-        if check_db_connection():
-            save_success = save_grants_to_db(tagged_grants)
-            if save_success:
-                st.success(f"Saved {len(tagged_grants)} grants to database.")
+        # If we have data from external sources, process and display it
+        if not all_grants.empty:
+            st.success(f"Successfully retrieved grant data from: {', '.join(sources)}")
+            
+            # Process and tag the grants
+            processed_grants = process_grants(all_grants)
+            tagged_grants = tag_grants(processed_grants)
+            
+            # Save to database
+            if check_db_connection():
+                save_success = save_grants_to_db(tagged_grants)
+                if save_success:
+                    st.success(f"Saved {len(tagged_grants)} grants to database.")
+                else:
+                    st.warning("Failed to save grants to database.")
             else:
-                st.warning("Failed to save grants to database.")
+                st.warning("Database connection failed. Grants will not be saved.")
+            
+            st.session_state.grants_data = tagged_grants
+            st.session_state.last_refresh = datetime.datetime.now()
+            
+            return tagged_grants
         else:
-            st.warning("Database connection failed. Grants will not be saved.")
-        
-        st.session_state.grants_data = tagged_grants
-        st.session_state.last_refresh = datetime.datetime.now()
-        
-        return tagged_grants
+            # If no external data is available, show an error message
+            st.error("No grant data could be retrieved from external sources at this time.")
+            
+            # Check if we have data in the database as a fallback
+            if check_db_connection():
+                db_grants = load_grants_from_db()
+                if not db_grants.empty:
+                    st.info(f"Displaying {len(db_grants)} previously saved grants from database.")
+                    st.session_state.grants_data = db_grants
+                    st.session_state.last_refresh = datetime.datetime.now()
+                    return db_grants
+            
+            # Return empty DataFrame if no data is available
+            return pd.DataFrame()
 
 
 # Sidebar for filters and controls

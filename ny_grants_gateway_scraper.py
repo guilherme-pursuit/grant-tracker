@@ -9,8 +9,14 @@ import re
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# NY State Grants Gateway URL
-NY_GRANTS_GATEWAY_URL = "https://grantsmanagement.ny.gov/opportunities"
+# NY State Grants Gateway URLs - multiple URLs to try in case the main one is down or has moved
+NY_GRANTS_GATEWAY_URLS = [
+    "https://grantsmanagement.ny.gov/opportunities",
+    "https://grantsgateway.ny.gov/IntelliGrants_NYSGG/module/nysgg/goportal.aspx",
+    "https://www.grants.ny.gov/portal/",
+    "https://apps.cio.ny.gov/apps/cfa/",
+    "https://regional-institute.buffalo.edu/nys-funding-opportunities/"
+]
 
 def fetch_ny_grants_gateway_opportunities():
     """
@@ -20,18 +26,38 @@ def fetch_ny_grants_gateway_opportunities():
     logging.info("Fetching grant opportunities from NY State Grants Gateway...")
     
     try:
-        # Fetch the main opportunities page
-        try:
-            response = requests.get(NY_GRANTS_GATEWAY_URL, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-            }, timeout=15)  # Add timeout to avoid hanging
-            
-            if response.status_code != 200:
-                logging.error(f"Failed to fetch NY Grants Gateway page: {response.status_code}")
-                return create_empty_grants_df()
+        # Headers for requests
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Referer": "https://www.google.com/",
+            "Connection": "keep-alive"
+        }
+        
+        # Try each URL in the list
+        response = None
+        used_url = None
+        
+        for url in NY_GRANTS_GATEWAY_URLS:
+            try:
+                logging.info(f"Trying NY Grants URL: {url}")
+                temp_response = requests.get(url, headers=headers, timeout=15)
                 
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Request error when fetching NY Grants Gateway: {str(e)}")
+                if temp_response.status_code == 200:
+                    logging.info(f"Successfully connected to {url}")
+                    response = temp_response
+                    used_url = url
+                    break
+                else:
+                    logging.warning(f"Failed to fetch from {url}: {temp_response.status_code}")
+            except requests.exceptions.RequestException as e:
+                logging.warning(f"Request error when trying {url}: {str(e)}")
+                continue
+        
+        # If all URLs failed
+        if not response:
+            logging.error("All NY Grants Gateway URLs failed")
             return create_empty_grants_df()
         
         # Parse the HTML
@@ -39,32 +65,101 @@ def fetch_ny_grants_gateway_opportunities():
         
         # Find the table containing grant opportunities
         opportunities = []
+        grant_elements = []
         
-        # The structure of the page might vary, so we're looking for key elements
-        grant_elements = soup.find_all("div", class_="views-row")
+        # Try different possible structures based on the URL we successfully accessed
+        logging.info(f"Parsing content from {used_url}")
         
+        # First try common class-based selectors
+        selectors_to_try = [
+            "div.views-row",
+            "div.opportunity-item",
+            "tr.opportunity-row",
+            "tr.grant-listing",
+            "div.grant-opportunity",
+            "div.funding-item",
+            "article.node--type-grant",
+            "li.grant-item",
+            "div.card"
+        ]
+        
+        for selector in selectors_to_try:
+            element_type, element_class = selector.split('.')
+            elements = soup.find_all(element_type, class_=element_class)
+            if elements:
+                logging.info(f"Found {len(elements)} grant elements using selector: {selector}")
+                grant_elements = elements
+                break
+        
+        # If class-based selectors fail, try more generic approaches
         if not grant_elements:
-            logging.warning("No grant elements found on the NY Grants Gateway page. Structure may have changed.")
-            # Try alternative selectors if the page structure might have changed
-            grant_elements = soup.find_all("div", class_="opportunity-item")
+            logging.warning("No elements found with class-based selectors. Trying more generic selectors.")
             
-            if not grant_elements:
-                # Second fallback attempt
-                grant_elements = soup.find_all("tr", class_="opportunity-row")
+            # Look for tables that might contain grant data
+            tables = soup.find_all("table")
+            for table in tables:
+                rows = table.find_all("tr")
+                if len(rows) > 1:  # Header + at least one data row
+                    grant_elements = rows[1:]  # Skip header row
+                    logging.info(f"Found potential grant data in table with {len(grant_elements)} rows")
+                    break
         
+        # If still no results, look for any divs or lists with titles that might be grants
+        if not grant_elements:
+            # Look for any divs with titles or headings
+            for heading_tag in ["h2", "h3", "h4"]:
+                headings = soup.find_all(heading_tag)
+                if headings:
+                    for heading in headings:
+                        parent = heading.parent
+                        if parent and parent.name in ["div", "article", "section", "li"]:
+                            grant_elements.append(parent)
+            
+            if grant_elements:
+                logging.info(f"Found {len(grant_elements)} potential grant elements from headings")
+        
+        # Process the found elements
         for grant_element in grant_elements:
             try:
-                # Extract title and link
-                title_element = grant_element.find("span", class_="field-content") or grant_element.find("h3") or grant_element.find("a")
-                if not title_element:
+                # Extract title - try multiple potential selectors
+                title_element = (
+                    grant_element.find("span", class_="field-content") or 
+                    grant_element.find("h2") or
+                    grant_element.find("h3") or
+                    grant_element.find("h4") or
+                    grant_element.find("a") or
+                    grant_element.find("td", class_="title") or
+                    grant_element.find("div", class_="title")
+                )
+                
+                # If no specific title element found, use the element text itself if it's short enough
+                if not title_element and len(grant_element.get_text(strip=True)) < 200:
+                    title = grant_element.get_text(strip=True)
+                elif title_element:
+                    title = title_element.get_text(strip=True)
+                else:
+                    # No title found, skip this element
                     continue
                 
-                title = title_element.get_text(strip=True)
-                link_element = title_element.find("a") if not title_element.name == "a" else title_element
-                link = link_element["href"] if link_element and "href" in link_element.attrs else ""
+                # Extract link
+                link_element = (
+                    grant_element.find("a") or
+                    (title_element.find("a") if title_element and title_element.name != "a" else title_element)
+                )
                 
-                if link and not link.startswith("http"):
-                    link = f"https://grantsmanagement.ny.gov{link}"
+                link = ""
+                if link_element and "href" in link_element.attrs:
+                    link = link_element["href"]
+                    # Fix relative URLs
+                    if link and not link.startswith("http"):
+                        if link.startswith("/"):
+                            # Extract domain from used_url 
+                            domain_match = re.match(r"https?://[^/]+", used_url)
+                            domain = domain_match.group(0) if domain_match else "https://grantsmanagement.ny.gov"
+                            link = f"{domain}{link}"
+                        else:
+                            # Assume it's relative to the current URL
+                            link = f"{used_url.rstrip('/')}/{link.lstrip('/')}"
                 
                 # Extract other information
                 info_elements = grant_element.find_all("div", class_="views-field") or grant_element.find_all("div", class_="field")
