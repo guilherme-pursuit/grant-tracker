@@ -3,12 +3,14 @@ import pandas as pd
 import datetime
 import io
 import base64
+import time
 from grants_gov_api import fetch_grants_gov_opportunities
 from ny_grants_gateway_scraper import fetch_ny_grants_gateway_opportunities
 from grant_processor import process_grants, tag_grants
 from utils import send_email, send_slack
 from funder_data import FUNDER_CATEGORIES
 from sample_grants_data import fetch_sample_grants
+from database import save_grants_to_db, load_grants_from_db, check_db_connection
 
 # Set page configuration
 st.set_page_config(
@@ -33,6 +35,28 @@ if 'last_refresh' not in st.session_state:
     st.session_state.last_refresh = None
 
 
+# Function to load grants from database
+def load_grants():
+    with st.spinner("Loading grants from database..."):
+        # Check database connection
+        if not check_db_connection():
+            st.error("Database connection failed. Unable to load saved grants.")
+            return None
+        
+        # Load grants from database
+        grants_df = load_grants_from_db()
+        
+        if grants_df.empty:
+            st.info("No grants found in database. Fetching from external sources.")
+            return None
+        
+        st.success(f"Loaded {len(grants_df)} grants from database.")
+        st.session_state.grants_data = grants_df
+        st.session_state.last_refresh = datetime.datetime.now()
+        
+        return grants_df
+
+
 # Function to fetch all grant opportunities
 def fetch_all_grants():
     with st.spinner("Fetching grant opportunities..."):
@@ -51,6 +75,16 @@ def fetch_all_grants():
         # Process and tag the grants
         processed_grants = process_grants(all_grants)
         tagged_grants = tag_grants(processed_grants)
+        
+        # Save to database
+        if check_db_connection():
+            save_success = save_grants_to_db(tagged_grants)
+            if save_success:
+                st.success(f"Saved {len(tagged_grants)} grants to database.")
+            else:
+                st.warning("Failed to save grants to database.")
+        else:
+            st.warning("Database connection failed. Grants will not be saved.")
         
         st.session_state.grants_data = tagged_grants
         st.session_state.last_refresh = datetime.datetime.now()
@@ -154,9 +188,18 @@ if st.session_state.grants_data is not None:
 
 # Main content area
 if st.session_state.grants_data is None:
-    st.info("Click 'Refresh Grant Data' to fetch the latest grant opportunities.")
-    if st.button("Fetch Grant Data"):
-        fetch_all_grants()
+    # Try to load from database first
+    db_grants = load_grants()
+    
+    # If no grants in database, show the fetch button
+    if db_grants is None:
+        st.info("Click 'Refresh Grant Data' to fetch the latest grant opportunities.")
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            if st.button("Fetch Grant Data"):
+                fetch_all_grants()
+        with col2:
+            st.info("This will fetch grant data from external sources and save to database.")
 else:
     # Display the filtered grants
     st.header(f"Grant Opportunities ({len(filtered_df)} results)")
