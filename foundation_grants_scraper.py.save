@@ -1,0 +1,180 @@
+# Combined list of all foundation grant URLs (now INCLUDING your new sources)
+FOUNDATION_GRANT_URLS = (
+    MAJOR_FOUNDATION_URLS +
+    CORPORATE_FOUNDATION_URLS +
+    GRANT_AGGREGATOR_URLS +
+    COMMUNITY_FOUNDATION_URLS +
+    ADDITIONAL_FOUNDATION_URLS
+)
+
+if __name__ == "__main__":
+    df = fetch_foundation_grants()
+    print(f"\nTotal grants found: {len(df)}\n")
+    print(
+        df[["Funder", "Title", "Deadline", "Link"]]
+        .head(20)
+        .to_string(index=False)
+    import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+import datetime
+import logging
+import time
+import re
+import random
+from urllib.parse import urljoin
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# URLs for foundation grant sources
+# Organized by category (major foundations, corporate foundations, grant aggregators)
+
+# Major foundation websites
+MAJOR_FOUNDATION_URLS = [
+    "https://www.publicbenefitinnovationfund.org/",
+    "https://www.fordfoundation.org/work/our-grants/",
+    "https://www.macfound.org/grants",
+    "https://www.rwjf.org/en/grants/funding-opportunities.html",
+    "https://www.wkkf.org/grants",
+    "https://www.gatesfoundation.org/about/how-we-work/grant-opportunities",
+    "https://www.rockefellerfoundation.org/grants/",
+    "https://www.hewlett.org/grants/",
+    "https://www.carnegie.org/grants/",
+    "https://www.opensocietyfoundations.org/grants",
+    "https://www.kresge.org/our-work/grants-social-investments/",
+    "https://www.irvine.org/grantmaking/",
+    "https://www.kauffman.org/grants/",
+    "https://sloan.org/grants/apply",
+    "https://simonsfoundation.org/funding-opportunities/",
+    "https://www.arnoldventures.org/grants",
+    "https://www.robinhood.org/programs/",
+    "https://www.aecf.org/work/grant-making/",
+    "https://www.emcf.org/grantees/",
+    "https://www.luminafoundation.org/grants-opportunities/",
+    "https://www.surdna.org/grants/",
+    "https://www.kff.org/grants/",
+    "https://mmt.org/grants",
+    "https://www.aspeninstitute.org/programs/",
+    "https://www.joycefdn.org/grants",
+    "https://www.schusterman.org/funding-opportunities",
+    "https://www.hfpg.org/apply-for-funding",
+    "https://www.mcknight.org/grant-opportunities/",
+    "https://www.mcarthurfdn.org/funding-opportunities",
+    "https://www.rbf.org/programs",
+    "https://www.blueshieldcafoundation.org/grants",
+]
+
+# Corporate foundation and tech company grants
+CORPORATE_FOUNDATION_URLS = [
+    "https://www.microsoft.com/en-us/corporate-responsibility/philanthropies/applying-for-a-grant",
+    "https://www.google.org/our-work/",
+    "https://www.salesforce.org/grants/",
+    "https://foundation.walmart.org/grant-applicants/",
+    "https://corporate.comcast.com/impact/philanthropy",
+    "https://about.bankofamerica.com/en/making-an-impact/charitable-foundation-funding",
+    "https://www.jpmorganchase.com/impact/our-approach/global-philanthropy",
+    "https://www.wellsfargo.com/about/corporate-responsibility/community-giving/",
+    "https://corporate.target.com/corporate-responsibility/philanthropy/corporate-giving/grant-guidelines",
+    "https://www.att.com/foundation/",
+    "https://corporate.verizon.com/responsibility/foundation/",
+    "https://www.coca-colacompany.com/shared-future/coca-cola-foundation",
+    "https://www.ibm.org/initiatives/ibm-foundation",
+    "https://www.cigna.com/about-us/corporate-responsibility/cigna-foundation",
+    "https://www.intel.com/content/www/us/en/corporate-responsibility/intel-foundation.html",
+    "https://www.prudential.com/links/about/corporate-social-responsibility",
+    "https://www.oracle.com/corporate/citizenship/",
+    "https://www.accenture.com/us-en/about/corporate-citizenship/corporate-citizenship",
+    "https://www.adobe.com/corporate-responsibility.html",
+    "https://corporate.delltechnologies.com/en-us/social-impact/transforming-lives/grants.htm",
+    "https://www.boeing.com/principles/community-engagement.page",
+    "https://www.mastercard.us/en-us/about-mastercard/corporate-sustainability/social-sustainability/the-mastercard-impact-fund.html",
+    "https://www.uber.com/us/en/community/giving-back/",
+    "https://www.airbnb.org/",
+    "https://slack.com/social-impact",
+    "https://www.workday.com/en-us/company/foundation.html",
+    "https://www.linkedin.com/legal/linkedin-for-nonprofits",
+    "https://corporate.walmart.com/c/us-foundation",
+    "https://www.redhat.com/en/about/open-source-program-office",
+    "https://foundation.nvidia.com/",
+]
+
+# Grant aggregator sites and grant finding resources
+GRANT_AGGREGATOR_URLS = [
+    "https://candid.org/find-funding",
+    "https://www.grantwatch.com/cat/41/workforce-grants.html",
+    "https://philanthropynewyork.org/rfps-member-updates",
+    "https://www.grants.gov/web/grants/search-grants.html",
+    "https://www.instrumentl.com/nonprofit-grants",
+    "https://grantstation.com/search/funding-resources",
+    "https://www.insidephilanthropy.com/grants-for-nonprofits",
+    "https://www.philanthropy.com/grants",
+    "https://ssir.org/topics/category/funders",
+    "https://www.grantforward.com/index",
+    "https://www.foundationcenter.org/",
+    "https://www.charitynavigator.org/",
+    "https://www.councilofnonprofits.org/tools-resources/finding-funds",
+    "https://www.tgci.com/funding-sources",
+    "https://philanthropynewsdigest.org/rfps",
+    "https://www.devex.com/funding",
+    "https://www.pivotdb.com",
+    "https://grantselect.com/",
+]
+
+# Community foundation websites
+COMMUNITY_FOUNDATION_URLS = [
+    "https://www.nycommunitytrust.org/information-for/for-nonprofits/",
+    "https://www.siliconvalleycf.org/grantmaking",
+    "https://www.cct.org/nonprofits/",
+    "https://www.calfund.org/nonprofits/grant-opportunities/",
+    "https://www.cfgreateratlanta.org/nonprofits/",
+    "https://www.clevelandfoundation.org/grants/apply-for-a-grant/",
+    "https://www.pittsburghfoundation.org/apply",
+    "https://www.cof.org/community-foundation-locator",
+]
+
+# Special foundation URLs mapping (your existing SPECIFIC_FOUNDATION_URLS)…
+SPECIFIC_FOUNDATION_URLS = {
+    # …your mappings here…
+}
+
+# -------------- NEW ADDITIONS START HERE --------------
+ADDITIONAL_FOUNDATION_URLS = [
+    "https://sloan.org/grants/open-calls",
+    "https://www.bankofamerica.com/philanthropic/search/?program=4011&area=NY",
+    "https://submit.gatesfoundation.org/",
+    "https://www.citigroup.com/global/foundation/apply-for-funding",
+    "https://www.google.org/opportunities/",
+    "https://foundation.mozilla.org/en/what-we-fund/programs/mozilla-technology-fund-mtf/call-for-proposals/",
+    "https://newprofit.org/apply-for-funding/",
+    "https://robinhood.org/our-work/become-grantee/",
+    "https://philanthropynewsdigest.org/rfps/(search)/?search=1&tags_interest%5B%5D=workforce+development&tags_location%5B%5D=new+york&search_text=&btn=&days=0",
+    "https://grantstation.com/search/us-funders?sort_bef_combine=grantmaker_ASC&geographic_scope[486]=486&facets_field_areas_of_interest_options_op=or&areas_of_interest[32]=32&areas_of_interest[193]=193&areas_of_interest[602]=602&areas_of_interest[136]=136&areas_of_interest[31]=31&facets_field_target_populations_op=or&target_populations[376]=376&target_populations[412]=412&target_populations[3821]=3821&facets_field_types_of_support_op=or&types_of_support[26]=26&types_of_support[30]=30&types_of_support[445]=445&types_of_support[28]=28&types_of_support[178]=178&types_of_support[407]=407&types_of_support[421]=421&types_of_support[204]=204&types_of_support[29]=29&app_deadline_date[ninety_oneeighty]=ninety_oneeighty&check_logged_in=1"
+]
+# -------------- NEW ADDITIONS END HERE --------------
+
+# Merge in SPECIFIC_FOUNDATION_URLS
+for name, url in SPECIFIC_FOUNDATION_URLS.items():
+    if url not in MAJOR_FOUNDATION_URLS and url not in CORPORATE_FOUNDATION_URLS:
+        if "foundation" in name.lower() or "philanthrop" in name.lower() or "trust" in name.lower():
+            MAJOR_FOUNDATION_URLS.append(url)
+        else:
+            CORPORATE_FOUNDATION_URLS.append(url)
+
+# Combined list of all foundation grant URLs (now INCLUDING your new sources)
+FOUNDATION_GRANT_URLS = (
+    MAJOR_FOUNDATION_URLS +
+    CORPORATE_FOUNDATION_URLS +
+    GRANT_AGGREGATOR_URLS +
+    COMMUNITY_FOUNDATION_URLS +
+    ADDITIONAL_FOUNDATION_URLS
+)
+
+if __name__ == "__main__":
+    df = fetch_foundation_grants()
+    print(f"\nTotal grants found: {len(df)}\n")
+    print(
+        df[["Funder", "Title", "Deadline", "Link"]]
+        .head(20)
+        .to_string(index=False)
+    )
