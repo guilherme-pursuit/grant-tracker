@@ -1,13 +1,12 @@
 import streamlit as st
-import datetime
 import pandas as pd
-from sample_grants_data import fetch_sample_grants
+from foundation_grants_scraper import fetch_foundation_grants
 
 st.set_page_config(page_title="Grant Tracker MVP", layout="wide")
 st.title("📊 Pursuit Grant Tracker (MVP)")
 
-# Load sample data
-df = fetch_sample_grants()
+# Fetch live grants on load
+df = fetch_foundation_grants()
 
 # Sidebar filters
 st.sidebar.header("Filters")
